@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Parcours des tirs Mbappé</title>
+<title>Parcours des tirs __NOM_COURT__</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Arvo:wght@400;700&display=block" rel="stylesheet">
 <style>
@@ -53,10 +53,10 @@ svg { display: block; }
 <div class="scroller">
   <div class="paper" id="paper">
     <header>
-      <h1>Kylian Mbappé,<br>le parcours de ses tirs</h1>
+      <h1>__NOM__,<br>le parcours de ses tirs</h1>
       <div class="sub" id="sub"></div>
       <div class="filters" id="filters"></div>
-      <div class="photo"><img src="__PHOTO__" alt="Kylian Mbappé"></div>
+      <div class="photo"><img src="__PHOTO__" alt="__NOM__"></div>
     </header>
     <svg id="flow" width="2960" height="1660"></svg>
   </div>
@@ -78,8 +78,12 @@ const STAGES = [
   { key: 'how',  title: 'COMMENT IL A MARQUÉ', goalsOnly: true, order: ['Pied droit', 'Pied gauche', 'Tête'] },
   { key: 'phase', title: 'PHASE DU BUT', goalsOnly: true, order: ['Jeu placé', 'Contre-attaque', 'Penalty', 'Corner', 'Coup franc direct', 'Autre CPA*', 'Action individuelle'] },
 ];
-const SEASONS = [['all', 'Tout'], ['2024-2025', '2024-25'], ['2025-2026', '2025-26'], ['2026-2027', '2026-27']];
-const COMPS = [['all', 'Toutes'], ['laliga', 'Liga'], ['champions-league', 'Ligue des champions']];
+// joueur, équipe, saisons et compétitions : injectés par build_fresque.py depuis joueurs/<id>/joueur.json et l'export
+const META = /*__META__*/{ nom: 'Joueur', equipe: 'Équipe', seasons: [], comps: [] };
+const SEASONS = [['all', 'Tout'], ...META.seasons];
+const COMPS = [['all', 'Toutes'], ...META.comps];
+const SEASON_ALL = META.seasons.length > 1 ? `${META.seasons[0][1]} → ${META.seasons[META.seasons.length - 1][1]}` : (META.seasons[0] || [, ''])[1];
+const COMP_ALL = META.comps.map(c => c[1]).join(' + ');
 const state = { season: 'all', comp: 'all' };
 const NS = 'http://www.w3.org/2000/svg';
 const svg = document.getElementById('flow'), tip = document.getElementById('tip');
@@ -214,9 +218,9 @@ function draw() {
   const shots = prepare();
   const { N, G, links } = layout(shots);
   svg.innerHTML = '';
-  const seasonTxt = state.season === 'all' ? '2024-25 → 2026-27' : SEASONS.find(s => s[0] === state.season)[1];
-  const compTxt = state.comp === 'all' ? 'Liga + Ligue des champions' : COMPS.find(c => c[0] === state.comp)[1];
-  document.getElementById('sub').textContent = `Real Madrid · ${compTxt} · ${seasonTxt} · ${N} tirs, ${G} buts (${pct(G, N)})`;
+  const seasonTxt = state.season === 'all' ? SEASON_ALL : SEASONS.find(s => s[0] === state.season)[1];
+  const compTxt = state.comp === 'all' ? COMP_ALL : COMPS.find(c => c[0] === state.comp)[1];
+  document.getElementById('sub').textContent = `${META.equipe} · ${compTxt} · ${seasonTxt} · ${N} tirs, ${G} buts (${pct(G, N)})`;
 
   const gl = el('g', {}, svg), gn = el('g', {}, svg), gt = el('g', {}, svg);
   const color = goal => goal ? 'var(--made)' : 'var(--miss)';

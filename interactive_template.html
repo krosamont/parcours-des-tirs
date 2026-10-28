@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Parcours des tirs Mbappé</title>
+<title>Parcours des tirs __NOM_COURT__</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Arvo:wght@400;700&display=block" rel="stylesheet">
 <!--__HEAD__-->
@@ -127,7 +127,7 @@ body.video { width: 1080px; height: 1350px; overflow: hidden; position: relative
 <header>
   <div class="left">
     <!--__NAV__-->
-    <h1>Kylian Mbappé,<br>le parcours de ses tirs</h1>
+    <h1>__NOM__,<br>le parcours de ses tirs</h1>
     <div class="sub" id="sub"></div>
     <div class="filters" id="filters"></div>
     <div class="trail">
@@ -136,13 +136,13 @@ body.video { width: 1080px; height: 1350px; overflow: hidden; position: relative
       <div class="ctrl">
         <button id="back">← Retour</button>
         <button id="reset">Recommencer</button>
-        <a class="btn full" href="fresque_mbappe.html">Voir la fresque complète</a>
+        <a class="btn full" href="fresque.html">Voir la fresque complète</a>
       </div>
       <div class="hint" id="hint"></div>
     </div>
   </div>
   <svg id="map" viewBox="0 0 900 262"></svg>
-  <div class="photo"><img src="__PHOTO__" alt="Kylian Mbappé"></div>
+  <div class="photo"><img src="__PHOTO__" alt="__NOM__"></div>
 </header>
 <div class="wrap" id="wrap"><svg id="flow" viewBox="0 0 2960 1040"></svg></div>
 <p class="note">* CPA : coup de pied arrêté (coup franc indirect, touche, etc.). Les corners, les penalties et les coups francs directs sont comptés à part.</p>
@@ -164,8 +164,12 @@ const STAGES = [
   { key: 'how',   title: 'COMMENT IL A MARQUÉ', goalsOnly: true, order: ['Pied droit', 'Pied gauche', 'Tête'] },
   { key: 'phase', title: 'PHASE DU BUT', goalsOnly: true, order: SIT },
 ];
-const SEASONS = [['all', 'Tout'], ['2024-2025', '2024-25'], ['2025-2026', '2025-26'], ['2026-2027', '2026-27']];
-const COMPS = [['all', 'Toutes'], ['laliga', 'Liga'], ['champions-league', 'Ligue des champions']];
+// joueur, équipe, saisons et compétitions : injectés par build_fresque.py depuis joueurs/<id>/joueur.json et l'export
+const META = /*__META__*/{ nom: 'Joueur', equipe: 'Équipe', seasons: [], comps: [] };
+const SEASONS = [['all', 'Tout'], ...META.seasons];
+const COMPS = [['all', 'Toutes'], ...META.comps];
+const SEASON_ALL = META.seasons.length > 1 ? `${META.seasons[0][1]} → ${META.seasons[META.seasons.length - 1][1]}` : (META.seasons[0] || [, ''])[1];
+const COMP_ALL = META.comps.map(c => c[1]).join(' + ');
 const qs = new URLSearchParams(location.search);
 // mode 'full' : chaque clic ouvre toute la phase suivante (tous les flux) ; mode 'path' : seul le bloc cliqué se déroule
 const state = { season: 'all', comp: 'all', mode: qs.get('path') || qs.get('mode') === 'path' ? 'path' : 'full',
@@ -514,9 +518,9 @@ function panel() {
   const idle = FULL() ? state.depth === 1 && !state.focus : !state.path.length;
   document.getElementById('back').disabled = idle;
   document.getElementById('reset').disabled = idle;
-  const seasonTxt = state.season === 'all' ? '2024-25 → 2026-27' : SEASONS.find(s => s[0] === state.season)[1];
-  const compTxt = state.comp === 'all' ? 'Liga + Ligue des champions' : COMPS.find(c => c[0] === state.comp)[1];
-  document.getElementById('sub').textContent = `Real Madrid · ${compTxt} · ${seasonTxt} · ${SHOTS_F.length} tirs, ${SHOTS_F.filter(s => s.goal).length} buts`;
+  const seasonTxt = state.season === 'all' ? SEASON_ALL : SEASONS.find(s => s[0] === state.season)[1];
+  const compTxt = state.comp === 'all' ? COMP_ALL : COMPS.find(c => c[0] === state.comp)[1];
+  document.getElementById('sub').textContent = `${META.equipe} · ${compTxt} · ${seasonTxt} · ${SHOTS_F.length} tirs, ${SHOTS_F.filter(s => s.goal).length} buts`;
 }
 
 // ---------- carte des tirs (but en haut, gauche de l'attaquant à gauche) ----------
@@ -580,7 +584,7 @@ function shotTip(s) {
   const row = (k, v) => `<br><span style="opacity:.65">${k}</span> ${v}`;
   return `${res} contre <b>${s.opp}</b>`
     + row('Date', `${d} · ${s.min}<sup>e</sup> minute`)
-    + row('Saison', `${saison} · ${s.comp === 'laliga' ? 'Liga' : 'Ligue des champions'}`)
+    + row('Saison', `${saison} · ${(COMPS.find(c => c[0] === s.comp) || [, s.comp])[1]}`)
     + (s.xg != null ? row('xG', s.xg.toFixed(2)) : '')
     + row('Tir', s.body + (s.ftouch ? ' · en une touche' : ''))
     + row('Zone', s.zone)

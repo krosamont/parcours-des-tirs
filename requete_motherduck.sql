@@ -1,6 +1,8 @@
--- Tirs de Kylian Mbappé (Real Madrid) : requête MotherDuck qui produit visuel_mbappe/export.csv
+-- Tirs d'un joueur : requête MotherDuck qui produit visuel_mbappe/joueurs/<joueur>/export.csv
+-- Gabarit : {{joueur}} (nom dans foot.bronze.events) et {{equipe}} (teamName) sont remplis depuis joueurs/<joueur>/joueur.json
+--   python3 visuel_mbappe/build_fresque.py <joueur> --sql   -> joueurs/<joueur>/requete.sql, prête à lancer
 -- Source : foot.bronze.events (événements WhoScored, enrichis FotMob) + foot.bronze.match_status
--- Une ligne = un tir. Export : résultat de la requête -> CSV -> visuel_mbappe/export.csv
+-- Une ligne = un tir. Export : résultat de la requête -> CSV -> joueurs/<joueur>/export.csv
 
 WITH match_info AS (
   SELECT
@@ -18,7 +20,7 @@ player_lookup AS (
     playerId,
     name AS player_name
   FROM foot.bronze.events
-  WHERE teamName = 'Real Madrid'
+  WHERE teamName = '{{equipe}}'
 )
 
 SELECT
@@ -84,9 +86,9 @@ LEFT JOIN match_info mi
 LEFT JOIN player_lookup pl
   ON CAST(s.relatedPlayerId AS BIGINT) = pl.playerId
 
--- Filtre : uniquement les tirs de Kylian Mbappé
-WHERE s.teamName = 'Real Madrid'
-  AND s.name = 'Kylian Mbappé'
+-- Filtre : uniquement les tirs du joueur
+WHERE s.teamName = '{{equipe}}'
+  AND s.name = '{{joueur}}'
   AND s.isShot = TRUE
 
 ORDER BY

@@ -1,21 +1,25 @@
-"""Fresque "Shot Flow" de Mbappé (inspirée des Shot Flow basket de graphsketball).
+"""Fresque « Shot Flow » des tirs d'un joueur (inspirée des Shot Flow basket de graphsketball).
 
-usage: python3 visuel_mbappe/build_fresque.py
-  lit  visuel_mbappe/export.csv  (tirs WhoScored x FotMob)
-  écrit visuel_mbappe/fresque_mbappe.html      (fresque complète, page autonome : données + photo embarquées)
-        visuel_mbappe/fresque_interactive.html  (même parcours, déroulé colonne par colonne au clic)
-        visuel_mbappe/site/index.html           (la page interactive aux couleurs de data-workers.com, à publier dans /projet/mbappe_tirs/)
+usage: python3 visuel_mbappe/build_fresque.py <joueur> [--carte] [--sql]
+  <joueur>  dossier joueurs/<joueur>/ : joueur.json (nom, équipe, photo, slug du site) + export.csv (requête MotherDuck)
+  --sql     écrit seulement joueurs/<joueur>/requete.sql (requete_motherduck.sql remplie pour ce joueur) et s'arrête
+  --carte   ajoute aussi la carte du joueur dans site/projet_index.html (page /projet/ de data-workers.com)
 
-Parcours d'un tir : ZONE -> SITUATION -> SURFACE -> RÉSULTAT -> (buts seulement) PASSEUR -> COMMENT IL A MARQUÉ
+écrit dans sortie/<joueur>/ :
+  fresque.html             fresque complète (page autonome : données + photo embarquées)
+  interactive.html         même parcours, déroulé phase par phase au clic (et mode vidéo ?video=1)
+  site/index.html          page interactive aux couleurs de data-workers.com, publiée dans /projet/<slug>/
+  site/clair/index.html    version claire, publiée dans /projet/<slug>/clair/
+
+Parcours d'un tir : ZONE -> SITUATION -> SURFACE -> RÉSULTAT -> (buts seulement) PASSEUR -> COMMENT IL A MARQUÉ -> PHASE
 """
-import base64, json, math
+import argparse, base64, html, json, re
 from pathlib import Path
 
 import pandas as pd
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
-PHOTO = ROOT / 'assets/players/701154.png'   # id FotMob de Mbappé
 
 # x en [0,105] vers le but adverse, y en [0,68] avec y haut = côté gauche de l'attaquant (coordonnées WhoScored x1.05 / x0.68)
 BOX_X, SIX_X = 83 * 1.05, 94.2 * 1.05             # 87.15 m, 98.9 m
@@ -23,13 +27,16 @@ BOX_Y, SIX_Y = (21.1 * .68, 78.9 * .68), (36.8 * .68, 63.2 * .68)
 
 SITUATION = {'RegularPlay': 'Jeu placé', 'FastBreak': 'Contre-attaque', 'Penalty': 'Penalty', 'FromCorner': 'Corner',
              'FreeKick': 'Coup franc direct', 'SetPiece': 'Autre CPA*', 'ThrowInSetPiece': 'Autre CPA*', 'IndividualPlay': 'Action individuelle'}
-BODY = {'RightFoot': 'Pied droit', 'LeftFoot': 'Pied gauche', 'Header': 'Tête'}
+BODY = {'RightFoot': 'Pied droit', 'LeftFoot': 'Pied gauche', 'Header': 'Tête', 'OtherBodyPart': 'Autre'}
 TYPE = {'Goal': 'But', 'SavedShot': 'Arrêté', 'MissedShots': 'Hors cadre', 'ShotOnPost': 'Poteau'}
-SHORT = {'Vinícius Júnior': 'Vinícius', 'Brahim Díaz': 'Brahim', 'Trent Alexander-Arnold': 'Alexander-Arnold', 'Arda Güler': 'Güler'}
+# libellés des compétitions (colonne competition de foot.bronze.events), dans l'ordre d'affichage
+COMPETITIONS = {'laliga': 'Liga', 'premier-league': 'Premier League', 'serie-a': 'Serie A', 'bundesliga': 'Bundesliga',
+                'ligue-1': 'Ligue 1', 'champions-league': 'Ligue des champions', 'europa-league': 'Ligue Europa',
+                'conference-league': 'Ligue Europa Conférence'}
 
 
 def zone(r):
-    # le champ Zone du CSV vaut 'Center' pour 474/478 tirs : on redécoupe à partir de x/y
+    # le champ Zone du CSV vaut presque toujours 'Center' : on redécoupe à partir de x/y
     if r.situation == 'Penalty':
         return 'Point de penalty'
     if r.x >= SIX_X and SIX_Y[0] <= r.y <= SIX_Y[1]:
@@ -41,14 +48,29 @@ def zone(r):
     return 'Hors surface'
 
 
-def short(name):
-    if not isinstance(name, str):
-        return None
-    return SHORT.get(name, name.split()[-1])
+def load(pid):
+    folder = HERE / 'joueurs' / pid
+    if not (folder / 'joueur.json').exists():
+        raise SystemExit(f'joueurs/{pid}/joueur.json introuvable (voir joueurs/mbappe/ pour un exemple)')
+    cfg = json.loads((folder / 'joueur.json').read_text())
+    cfg.setdefault('nom_court', cfg['nom'].split()[-1])
+    cfg.setdefault('nom_events', cfg['nom'])
+    cfg.setdefault('slug', re.sub(r'[^a-z0-9]+', '_', pid.lower()) + '_tirs')
+    cfg.setdefault('noms_courts', {})
+    cfg['id'], cfg['dir'], cfg['out'] = pid, folder, HERE / 'sortie' / pid
+    return cfg
 
 
-def main():
-    d = pd.read_csv(HERE / 'export.csv')
+def write_sql(cfg):
+    q = (HERE / 'requete_motherduck.sql').read_text()
+    q = q.replace('{{joueur}}', cfg['nom_events'].replace("'", "''")).replace('{{equipe}}', cfg['equipe'].replace("'", "''"))
+    (cfg['dir'] / 'requete.sql').write_text(q)
+    print(f"joueurs/{cfg['id']}/requete.sql : à lancer sur MotherDuck, puis exporter le résultat dans joueurs/{cfg['id']}/export.csv")
+
+
+def shots_of(cfg):
+    d = pd.read_csv(cfg['dir'] / 'export.csv')
+    short = lambda n: cfg['noms_courts'].get(n, n.split()[-1]) if isinstance(n, str) else None
     shots = []
     for r in d.itertuples():
         goal = r.type == 'Goal'
@@ -58,51 +80,107 @@ def main():
             'goal': int(goal), 'type': TYPE.get(r.type, r.type),
             'ast': short(r.shot_related_player_name), 'ftouch': int(r.FirstTouch == True),
             'x': round(r.x, 1), 'y': round(r.y, 1), 'xg': None if pd.isna(r.xg) else round(r.xg, 3),
-            'opp': r.ws_away_name if r.ws_home_name == 'Real Madrid' else r.ws_home_name,
+            'opp': r.ws_away_name if r.ws_home_name == r.teamName else r.ws_home_name,
             'date': r.fm_utcTime[:10], 'min': int(r.minute),
         })
-    photo = 'data:image/png;base64,' + base64.b64encode(PHOTO.read_bytes()).decode()
+    return shots
+
+
+def meta_of(cfg, shots):
+    seasons = sorted({s['season'] for s in shots})
+    order = list(COMPETITIONS)
+    comps = sorted({s['comp'] for s in shots}, key=lambda c: (order.index(c) if c in order else len(order), c))
+    return {'nom': cfg['nom'], 'equipe': cfg['equipe'],
+            'seasons': [[s, s[:5] + s[-2:] if re.fullmatch(r'\d{4}-\d{4}', s) else s] for s in seasons],
+            'comps': [[c, COMPETITIONS.get(c, c.replace('-', ' ').title())] for c in comps]}
+
+
+def site_replacements(cfg, shots, clair=False):
+    """Version publiée sur data-workers.com/projet/<slug>/ : couleurs, police, navigation et partage du site."""
+    nom, court, eq, n = html.escape(cfg['nom']), html.escape(cfg['nom_court']), html.escape(cfg['equipe']), len(shots)
+    url = f"https://data-workers.com/projet/{cfg['slug']}/" + ('clair/' if clair else '')
+    head = f"""<meta name="description" content="Les {n} tirs de {nom} ({eq}), de la zone de frappe jusqu'au passeur et à la phase du but : un Sankey interactif à dérouler phase par phase.">
+<meta property="og:title" content="{nom}, le parcours de ses tirs">
+<meta property="og:description" content="Zone, situation, surface, résultat, passeur : le Sankey interactif des tirs de {court} ({eq}).">
+<meta property="og:image" content="https://data-workers.com/projet/assets/{cfg['slug']}.jpg">
+<meta property="og:url" content="{url}">
+<link rel="icon" href="/assets/images/logo.ico">"""
+    switch = '<a class="switch" href="../">Version sombre</a>' if clair else '<a class="switch" href="clair/">Version claire</a>'
+    rep = {
+        f'<title>Parcours des tirs {court}</title>': f'<title>{nom}, le parcours de ses tirs · Data Workers</title>',
+        '<!--__HEAD__-->': head if clair else head + '\n<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">',
+        '/*__THEME__*/': (HERE / ('site_theme_clair.css' if clair else 'site_theme.css')).read_text(),
+        '<!--__NAV__-->': f'<nav class="sitenav"><img src="/assets/images/logo.png" alt=""><a href="https://data-workers.com/">Data Workers</a><span>/</span><a href="/projet/">Projets</a>{switch}</nav>',
+        '<!--__FOOT__-->': '<footer class="sitefoot"><a href="https://data-workers.com/">data-workers.com</a> · Kevin Rosamont Prombo · Données WhoScored × FotMob</footer>',
+    }
+    if not clair:
+        rep[f'<h1>{nom},<br>le parcours de ses tirs</h1>'] = f'<h1>{nom},<br><em>le parcours de ses tirs</em></h1>'
+    return rep
+
+
+def add_card(cfg, shots):
+    """Ajoute la carte du joueur dans site/projet_index.html (copie locale de /projet/), juste après la dernière carte Sankey."""
+    p = HERE / 'site' / 'projet_index.html'
+    page = p.read_text()
+    href = f"/projet/{cfg['slug']}/"
+    if f'href="{href}"' in page:
+        print(f'site/projet_index.html : la carte {href} existe déjà')
+        return
     g = sum(s['goal'] for s in shots)
-    for tpl, name, site in (('fresque_template.html', 'fresque_mbappe.html', None),
-                            ('interactive_template.html', 'fresque_interactive.html', None),
-                            ('interactive_template.html', 'site/index.html', SITE),
-                            ('interactive_template.html', 'site/clair/index.html', SITE_CLAIR)):
-        html = (HERE / tpl).read_text()
-        html = html.replace('/*__SHOTS__*/[]', json.dumps(shots, ensure_ascii=False)).replace('__PHOTO__', photo)
-        for key, value in (site or {}).items():
-            html = html.replace(key, value)
+    nom, court, eq = html.escape(cfg['nom']), html.escape(cfg['nom_court']), html.escape(cfg['equipe'])
+    card = f"""    <a class="card" href="{href}">
+      <div class="thumb" style="background-image:url('assets/{cfg['slug']}.jpg')" role="img" aria-label="Le Sankey des tirs de {nom} : zones, situations, surfaces, buts et ratés"></div>
+      <div class="body">
+        <span class="kind">Data visualisation · Football</span>
+        <h2>{court}, le parcours de ses tirs</h2>
+        <p>Les {len(shots)} tirs de {nom} ({eq}), dont {g} buts, suivis de bout en bout : d'où il frappe, dans quelle
+          situation, de quel pied, si c'est but, puis qui lui a fait la passe et dans quelle phase de jeu. On ouvre le
+          Sankey phase par phase, au clic.</p>
+        <div class="tags"><span>Sankey interactif</span><span>WhoScored / Opta</span><span>FotMob</span><span>MotherDuck</span></div>
+        <span class="go">Dérouler les tirs →</span>
+      </div>
+    </a>
+
+"""
+    # après la dernière carte « parcours de ses tirs » (slug en _tirs), sinon en tête de la grille
+    ends = [m.end() for m in re.finditer(r'<a class="card" href="/projet/[^"]+_tirs/">.*?</a>\n\n', page, re.S)]
+    at = ends[-1] if ends else page.index('<main class="grid">') + len('<main class="grid">\n')
+    p.write_text(page[:at] + card + page[at:])
+    print(f"site/projet_index.html : carte {href} ajoutée (à publier avec ./deploy.sh {cfg['id']} --index)")
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('joueur'); ap.add_argument('--carte', action='store_true'); ap.add_argument('--sql', action='store_true')
+    a = ap.parse_args()
+    cfg = load(a.joueur)
+    if a.sql:
+        return write_sql(cfg)
+    if not (cfg['dir'] / 'export.csv').exists():
+        write_sql(cfg)
+        raise SystemExit(f"joueurs/{cfg['id']}/export.csv manquant")
+    shots = shots_of(cfg)
+    meta = meta_of(cfg, shots)
+    photo = 'data:image/png;base64,' + base64.b64encode((ROOT / cfg['photo']).read_bytes()).decode()
+    g = sum(s['goal'] for s in shots)
+    data = {'/*__SHOTS__*/[]': json.dumps(shots, ensure_ascii=False), '__PHOTO__': photo,
+            "/*__META__*/{ nom: 'Joueur', equipe: 'Équipe', seasons: [], comps: [] }": json.dumps(meta, ensure_ascii=False)}
+    for tpl, name, site in (('fresque_template.html', 'fresque.html', None),
+                            ('interactive_template.html', 'interactive.html', None),
+                            ('interactive_template.html', 'site/index.html', site_replacements(cfg, shots)),
+                            ('interactive_template.html', 'site/clair/index.html', site_replacements(cfg, shots, clair=True))):
+        page = (HERE / tpl).read_text()
+        page = page.replace('__NOM_COURT__', html.escape(cfg['nom_court'])).replace('__NOM__', html.escape(cfg['nom']))
+        for key, value in {**(site or {}), **data}.items():
+            page = page.replace(key, value)
         for key in ('<!--__HEAD__-->', '/*__THEME__*/', '<!--__NAV__-->', '<!--__FOOT__-->'):
-            html = html.replace(key, '')
-        out = HERE / name
-        out.parent.mkdir(exist_ok=True)
-        out.write_text(html)
+            page = page.replace(key, '')
+        out = cfg['out'] / name
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(page)
         print(f'{out.relative_to(ROOT)}: {len(shots)} tirs, {g} buts')
-
-
-# version publiée sur data-workers.com/projet/mbappe_tirs/ : couleurs, police et navigation du site
-SITE_URL = 'https://data-workers.com/projet/mbappe_tirs/'
-SITE = {
-    '<title>Parcours des tirs Mbappé</title>': '<title>Kylian Mbappé, le parcours de ses tirs · Data Workers</title>',
-    '<!--__HEAD__-->': f"""<meta name="description" content="Les 478 tirs de Kylian Mbappé au Real Madrid, de la zone de frappe jusqu'au passeur et à la phase du but : un Sankey interactif à dérouler phase par phase.">
-<meta property="og:title" content="Kylian Mbappé, le parcours de ses tirs">
-<meta property="og:description" content="Zone, situation, surface, résultat, passeur : le Sankey interactif des tirs de Mbappé au Real Madrid.">
-<meta property="og:image" content="https://data-workers.com/projet/assets/mbappe_tirs.jpg">
-<meta property="og:url" content="{SITE_URL}">
-<link rel="icon" href="/assets/images/logo.ico">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">""",
-    '/*__THEME__*/': (HERE / 'site_theme.css').read_text(),
-    '<!--__NAV__-->': '<nav class="sitenav"><img src="/assets/images/logo.png" alt=""><a href="https://data-workers.com/">Data Workers</a><span>/</span><a href="/projet/">Projets</a><a class="switch" href="clair/">Version claire</a></nav>',
-    '<!--__FOOT__-->': '<footer class="sitefoot"><a href="https://data-workers.com/">data-workers.com</a> · Kevin Rosamont Prombo · Données WhoScored × FotMob</footer>',
-    '<h1>Kylian Mbappé,<br>le parcours de ses tirs</h1>': '<h1>Kylian Mbappé,<br><em>le parcours de ses tirs</em></h1>',
-}
-
-
-# version claire (/projet/mbappe_tirs/clair/) : le thème local, fond beige uni, même navigation
-SITE_CLAIR = {k: v for k, v in SITE.items() if k != '<h1>Kylian Mbappé,<br>le parcours de ses tirs</h1>'}
-SITE_CLAIR['<!--__HEAD__-->'] = SITE['<!--__HEAD__-->'].replace(f'content="{SITE_URL}"', f'content="{SITE_URL}clair/"').replace(
-    '\n<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">', '')
-SITE_CLAIR['/*__THEME__*/'] = (HERE / 'site_theme_clair.css').read_text()
-SITE_CLAIR['<!--__NAV__-->'] = SITE['<!--__NAV__-->'].replace('href="clair/">Version claire', 'href="../">Version sombre')
+    if a.carte:
+        add_card(cfg, shots)
 
 
 if __name__ == '__main__':

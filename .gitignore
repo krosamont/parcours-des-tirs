@@ -1,5 +1,6 @@
 .DS_Store
-# rendus lourds, régénérés par render_video.js
+# tout ce qui est généré : python3 build_fresque.py <joueur> puis les scripts de rendu (faire_joueur.sh)
+sortie/
 *.mp4
+*.MP4
 *.gif
-collage/_hd_*.png
