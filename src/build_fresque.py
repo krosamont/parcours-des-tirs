@@ -104,7 +104,7 @@ def site_replacements(cfg, shots, clair=False):
 <meta property="og:image" content="https://data-workers.com/projet/assets/{cfg['slug']}.jpg">
 <meta property="og:url" content="{url}">
 <link rel="icon" href="/assets/images/logo.ico">"""
-    switch = '<a class="switch" href="../">Version sombre</a>' if clair else '<a class="switch" href="clair/">Version claire</a>'
+    switch = '<a class="switch theme-switch" href="../">Version sombre</a>' if clair else '<a class="switch theme-switch" href="clair/">Version claire</a>'
     rep = {
         f'<title>Parcours des tirs {court}</title>': f'<title>{nom}, le parcours de ses tirs · Data Workers</title>',
         '<!--__HEAD__-->': head if clair else head + '\n<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">',
