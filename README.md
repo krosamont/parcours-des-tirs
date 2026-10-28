@@ -118,3 +118,15 @@ comment il a marqué, phase du but). Les images viennent du mode vidéo (`?video
 sans la grille. La version TikTok reprend la même image avec des bandes beiges en haut et en bas.
 
 « CPA* » = coup de pied arrêté (coup franc indirect, touche…) : la note est en bas des pages et des visuels.
+
+## 7. Carrousel de petites vidéos Instagram : `render_collage_video.js`
+
+```bash
+node visuel_mbappe/render_collage_video.js            # -> collage/video_1..8.mp4 (1080×1350, 30 i/s), ~4 min
+node visuel_mbappe/render_collage_video.js --only 3   # un seul clip
+```
+
+Dans l'esprit des posts « Shot Flow » de graphsketball : un clip par diapositive du carrousel.
+Clip 1 (7,7 s) : la fresque complète, puis un zoom à gauche et un panoramique jusqu'à la dernière colonne.
+Clips 2 à 8 (4,5 s) : une phase par clip. L'état précédent reste 0,8 s à l'écran, la colonne s'ouvre en 2,5 s
+(caméra qui la suit), puis 1,2 s de pause. Durées réglables dans `PHASE` et `ALL`.
