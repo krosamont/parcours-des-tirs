@@ -120,6 +120,16 @@ body.video { width: 1080px; height: 1350px; overflow: hidden; position: relative
 .vfoot .leg i { display: inline-block; width: 34px; height: 18px; margin-right: 10px; vertical-align: -2px; }
 .vfoot .ph { font-weight: 700; font-size: 26px; letter-spacing: .5px; }
 .vfoot .src { position: absolute; right: 0; bottom: -24px; font-size: 13px; color: var(--muted); }
+/* ?video=1&split=1 : haut d'une vidéo verticale 1080×1920 (1120 px), le bas est laissé libre pour une caméra face à l'objectif */
+body.video.split { height: 1120px; }
+.split header { padding: 40px 52px 0; height: 214px; }
+.split h1 { font-size: 46px; max-width: 760px; }
+.split .sub { font-size: 18px; margin-top: 12px; max-width: 720px; }
+.split .photo { right: 52px; top: 34px; width: 172px; height: 172px; }
+.split .wrap { top: 214px; height: 840px; }
+.split .vfoot { left: 52px; right: 52px; bottom: 30px; font-size: 20px; }
+.split .vfoot .ph { font-size: 23px; }
+.split .vfoot .src { bottom: -20px; font-size: 12px; }
 /*__THEME__*/
 </style>
 </head>
@@ -646,7 +656,7 @@ MOBILE.addEventListener('change', () => draw(-1, false));
 // ---------- mode vidéo : window.__frame(t) dessine l'image à l'instant t (secondes), sans dépendre de l'horloge ----------
 const TL = { intro: .5, rev: 1.5, hold: 1.0, zoom: 1.4, end: 2.6 };
 const phaseStart = k => TL.intro + k * (TL.rev + TL.hold);
-const VIEW_W = 1080, VIEW_H = 900, SC = VIEW_H / HH;              // échelle de travail : ~3 colonnes à l'écran
+const SPLIT = qs.has('split'), VIEW_W = 1080, VIEW_H = SPLIT ? 840 : 900, SC = VIEW_H / HH;              // échelle de travail : ~3 colonnes à l'écran
 const camFor = d => Math.max(0, Math.min(W - VIEW_W / SC, COLS[d - 1] + 470 - VIEW_W / SC));
 window.__duration = phaseStart(STAGES.length - 1) + TL.rev + TL.hold + TL.zoom + TL.end;
 window.__frame = t => {
@@ -664,6 +674,7 @@ window.__frame = t => {
   document.getElementById('ph').textContent = z > .5 ? 'Le parcours complet' : `Phase ${k + 1}/${STAGES.length} · ${STAGES[k].title}`;
 };
 if (VIDEO) document.body.classList.add('video');
+if (VIDEO && SPLIT) document.body.classList.add('split');
 
 (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => { VIDEO ? window.__frame(+qs.get('t') || 0) : draw(); window.__ready = true; });
 </script>
