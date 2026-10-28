@@ -74,7 +74,7 @@ compétition. Avec `?render=1`, les boutons sont masqués pour l'export d'image.
   les flux). Un clic sur une colonne précédente referme ce qui suit. Le bloc cliqué passe en jaune et ses flux sont
   mis en avant.
 - **Ma sélection** : seul le bloc cliqué se déroule, en entonnoir. Recliquer dessus le referme.
-- Le panneau donne le chemin, les tirs, buts, ratés, la réussite et l'xG de la sélection. La carte des tirs suit la
+- Le panneau donne le chemin, les tirs, buts, ratés, la réussite et l’xG de la sélection. Au survol, chaque point de la carte affiche son tir (adversaire, date, saison, xG, surface, zone, phase, passeur). La carte des tirs suit la
   sélection et ses zones sont cliquables. Il y a aussi « ← Retour », « Recommencer » et la touche Échap.
 - Adaptée au mobile : textes agrandis, Sankey qui défile vers la phase ouverte, pas d'infobulle au toucher.
 - Adresses directes : `?depth=4` (4 phases ouvertes), `?path=Hors surface|Jeu placé` (mode sélection),
@@ -102,7 +102,7 @@ ouverte. La fin recule pour montrer toute la fresque. Les durées se règlent da
 ./visuel_mbappe/deploy.sh --index    # publie aussi la page /projet/ (site/projet_index.html)
 ```
 
-- **Version sombre** (`site/index.html` → `/projet/mbappe_tirs/`) : couleurs du site (`site_theme.css`).
+- **Version sombre** (`site/index.html` → `/projet/mbappe_tirs/`) : couleurs du site (`site_theme.css`), sans la grille.
 - **Version claire** (`site/clair/index.html` → `/projet/mbappe_tirs/clair/`) : le thème local, même fond beige, sans
   la grille (`site_theme_clair.css`).
 - Un bouton « Version claire » / « Version sombre » dans la barre de navigation passe de l'une à l'autre.

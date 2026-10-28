@@ -51,7 +51,7 @@ button:disabled { opacity: .35; cursor: default; }
 .ctrl { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
 .hint { margin-top: 8px; font-size: 13px; color: var(--muted); font-style: italic; }
 #map { flex: 1 1 760px; min-width: 0; width: 100%; max-width: 1280px; height: auto; }
-.photo { flex: 0 0 auto; width: 340px; height: 340px; border: 4px solid var(--frame); background: var(--frame-bg); box-shadow: 4px 4px 0 rgba(0,0,0,.12); overflow: hidden; }
+.photo { flex: 0 0 auto; width: 200px; height: 200px; border: 4px solid var(--frame); background: var(--frame-bg); box-shadow: 4px 4px 0 rgba(0,0,0,.12); overflow: hidden; }
 .photo img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
 .wrap { overflow-x: auto; overflow-y: hidden; padding-bottom: 10px; }
 #flow { display: block; width: max(100%, 2200px); height: auto; }
@@ -551,9 +551,11 @@ function pitch() {
   rect(105, 107, 30.34, 37.66, { fill: 'var(--ink2)' });
   el('path', { d: `M${sx(34 + 5.5)},${sy(BX)} A${9.15 * K},${9.15 * K} 0 0 0 ${sx(34 - 5.5)},${sy(BX)}`, fill: 'none', stroke: 'var(--ink2)', 'stroke-width': 1.5 }, map);
   const sel = new Set(selection());
+  map._pts = [];
   for (const s of SHOTS_F.filter(s => s.zone !== 'Point de penalty' && s.x >= XMIN).sort((a, b) => sel.has(a) - sel.has(b) || a.goal - b.goal)) {
     const on = sel.has(s);
     el('circle', { cx: sx(s.y), cy: sy(s.x), r: on ? (s.goal ? 4.6 : 3.4) : 2.4, fill: on ? color(s.goal) : 'var(--faint)', opacity: on ? (s.goal ? .95 : .7) : .25, 'pointer-events': 'none' }, map);
+    map._pts.push({ cx: sx(s.y), cy: sy(s.x), s, on });
   }
   for (const [z, b] of Object.entries(ZONES)) {
     const h = rect(...b, { class: 'zone-hit' });
@@ -563,6 +565,8 @@ function pitch() {
   const pg = el('g', { style: 'cursor:pointer' }, map);
   el('circle', { cx: sx(34), cy: sy(92.925), r: 9, fill: pen.length ? 'var(--made)' : 'var(--ink2)', opacity: pen.length ? .9 : .6 }, pg);
   pg.addEventListener('click', () => mapPick('Point de penalty'));
+  const penAll = SHOTS_F.filter(s => s.zone === 'Point de penalty'), penG = penAll.filter(s => s.goal).length;
+  hover(pg, `<b>Penalties</b><br>${penAll.length} tirés · ${plural(penG, 'but')} · ${penAll.length - penG} ratés`);
   // étiquettes reliées aux zones (chiffres de la sélection courante)
   const tot = {};
   sel.forEach(s => { tot[s.zone] = tot[s.zone] || [0, 0]; tot[s.zone][0]++; tot[s.zone][1] += s.goal; });
@@ -581,6 +585,44 @@ function pitch() {
   tag('Surface · droite', 1, Y0 + 50, 95, 18);
   tag('Point de penalty', 1, Y0 + 120, 92.925, 34);
   tag('Hors surface', 1, Y0 + 196, 80, 22);
+}
+
+// infobulle des tirs de la carte : le point le plus proche du curseur (les zones restent cliquables dessous)
+function shotTip(s) {
+  const d = s.date.split('-').reverse().join('/'), saison = (SEASONS.find(x => x[0] === s.season) || [, s.season])[1];
+  const res = s.goal ? `<b style="color:var(--made-txt)">But</b>` : `<b style="color:var(--miss-txt)">Raté · ${s.type.toLowerCase()}</b>`;
+  const row = (k, v) => `<br><span style="opacity:.65">${k}</span> ${v}`;
+  return `${res} contre <b>${s.opp}</b>`
+    + row('Date', `${d} · ${s.min}<sup>e</sup> minute`)
+    + row('Saison', `${saison} · ${s.comp === 'laliga' ? 'Liga' : 'Ligue des champions'}`)
+    + (s.xg != null ? row('xG', s.xg.toFixed(2)) : '')
+    + row('Tir', s.body + (s.ftouch ? ' · en une touche' : ''))
+    + row('Zone', s.zone)
+    + row('Phase', s.sit)
+    + (s.goal ? row('Passeur', s.ast || 'sans passeur') : '');
+}
+if (HOVER) {
+  let ring = null;
+  const clear = () => { tip.style.opacity = 0; if (ring) { ring.remove(); ring = null; } map.style.cursor = ''; };
+  map.addEventListener('mousemove', ev => {
+    if (!map._pts) return;
+    const pt = new DOMPoint(ev.clientX, ev.clientY).matrixTransform(map.getScreenCTM().inverse());
+    let best = null, bd = 64;   // rayon de 8 unités autour du curseur
+    for (const p of map._pts) {
+      const d = (p.cx - pt.x) ** 2 + (p.cy - pt.y) ** 2 - (p.on ? 6 : 0);
+      if (d < bd) { bd = d; best = p; }
+    }
+    if (!best) { if (ring) clear(); return; }
+    if (!ring || ring._p !== best) {
+      if (ring) ring.remove();
+      ring = el('circle', { cx: best.cx, cy: best.cy, r: 7.5, fill: 'none', stroke: 'var(--ink)', 'stroke-width': 1.8, 'pointer-events': 'none' }, map);
+      ring._p = best;
+      tip.innerHTML = shotTip(best.s); tip.style.opacity = 1;
+    }
+    moveTip(ev);
+  });
+  map.addEventListener('mouseleave', clear);
+  map.addEventListener('click', () => { ring = null; });   // la carte est redessinée au clic
 }
 
 // ---------- filtres / commandes ----------

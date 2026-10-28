@@ -8,9 +8,7 @@
   --frame: #2dc4c2; --frame-bg: #0b1020; --blend: normal; --radius: 999px; --on-bg: #2dc4c2; --on-ink: #070b15;
   --line: rgba(255,255,255,.09);
 }
-body { background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(45,196,194,.12), transparent 70%),
-  linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size: auto, 40px 40px, 40px 40px; background-attachment: scroll; }
+body { background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(45,196,194,.12), transparent 70%); background-size: auto; }
 h1 { font-weight: 800; letter-spacing: -.02em; text-shadow: none; }
 h1 em { font-style: normal; color: var(--made); }
 .sitenav { display: flex; align-items: center; gap: 12px; margin-bottom: 26px; font-size: 14px; font-weight: 500; }
