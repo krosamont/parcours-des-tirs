@@ -110,7 +110,7 @@ ouverte. La fin recule pour montrer toute la fresque. Les durées se règlent da
 ## 6. Carrousel Instagram / TikTok : `render_collage.js`
 
 ```bash
-node visuel_mbappe/render_collage.js   # -> collage/instagram_1..8.png (1080×1350) et collage/tiktok_1..8.png (1080×1920)
+node visuel_mbappe/render_collage.js   # -> collage/instagram_1..8.png (1080×1440, le 3:4 des publications Instagram) et collage/tiktok_1..8.png (1080×1920)
 ```
 
 Visuel 1 : la fresque complète. Visuels 2 à 8 : une phase par image (zone, situation, surface, résultat, passeur,
