@@ -188,6 +188,8 @@ réduit, sans la grille.
 ```bash
 ./deploy.sh mbappe            # régénère et publie les deux versions + la vignette
 ./deploy.sh mbappe --index    # publie aussi la page /projet/ (site/projet_index.html)
+                               # et sa version claire /projet/clair/ (site/projet_index_clair.html :
+                               # une carte ajoutée par --carte est à recopier dans cette page)
 ```
 
 - **Version sombre** (`sortie/<joueur>/site/index.html` → `/projet/<slug>/`) : couleurs du site (`themes/site_sombre.css`).
