@@ -1,0 +1,14 @@
+/* Version claire de data-workers.com/projet/mbappe_tirs/clair/ : le thème local (Arvo, bleu / rouge), même fond beige, sans la grille */
+:root { --line: rgba(29,27,25,.14); }
+body { background-image: none; }
+.sitenav { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; font-size: 14px; }
+.sitenav img { width: 30px; height: 30px; border-radius: 8px; }
+.sitenav a { color: var(--muted); text-decoration: none; }
+.sitenav a:hover { color: var(--ink); }
+.sitenav span { color: var(--faint); }
+.sitenav .switch { margin-left: auto; border: 1.5px solid var(--ink); border-radius: 2px; padding: 4px 11px; color: var(--ink); font-size: 13px; }
+.sitenav .switch:hover { background: var(--ink); color: var(--paper); }
+.btn.full { display: none; }
+.sitefoot { margin: 18px 40px 40px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+.sitefoot a { color: var(--ink2); }
+@media (max-width: 700px) { .sitefoot { margin: 14px 16px 28px; } .sitenav { margin-bottom: 14px; } }

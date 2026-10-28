@@ -63,12 +63,13 @@ def main():
         })
     photo = 'data:image/png;base64,' + base64.b64encode(PHOTO.read_bytes()).decode()
     g = sum(s['goal'] for s in shots)
-    for tpl, name, site in (('fresque_template.html', 'fresque_mbappe.html', False),
-                            ('interactive_template.html', 'fresque_interactive.html', False),
-                            ('interactive_template.html', 'site/index.html', True)):
+    for tpl, name, site in (('fresque_template.html', 'fresque_mbappe.html', None),
+                            ('interactive_template.html', 'fresque_interactive.html', None),
+                            ('interactive_template.html', 'site/index.html', SITE),
+                            ('interactive_template.html', 'site/clair/index.html', SITE_CLAIR)):
         html = (HERE / tpl).read_text()
         html = html.replace('/*__SHOTS__*/[]', json.dumps(shots, ensure_ascii=False)).replace('__PHOTO__', photo)
-        for key, value in (SITE if site else {}).items():
+        for key, value in (site or {}).items():
             html = html.replace(key, value)
         for key in ('<!--__HEAD__-->', '/*__THEME__*/', '<!--__NAV__-->', '<!--__FOOT__-->'):
             html = html.replace(key, '')
@@ -90,10 +91,18 @@ SITE = {
 <link rel="icon" href="/assets/images/logo.ico">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">""",
     '/*__THEME__*/': (HERE / 'site_theme.css').read_text(),
-    '<!--__NAV__-->': '<nav class="sitenav"><img src="/assets/images/logo.png" alt=""><a href="https://data-workers.com/">Data Workers</a><span>/</span><a href="/projet/">Projets</a></nav>',
+    '<!--__NAV__-->': '<nav class="sitenav"><img src="/assets/images/logo.png" alt=""><a href="https://data-workers.com/">Data Workers</a><span>/</span><a href="/projet/">Projets</a><a class="switch" href="clair/">Version claire</a></nav>',
     '<!--__FOOT__-->': '<footer class="sitefoot"><a href="https://data-workers.com/">data-workers.com</a> · Kevin Rosamont Prombo · Données WhoScored × FotMob</footer>',
     '<h1>Kylian Mbappé,<br>le parcours de ses tirs</h1>': '<h1>Kylian Mbappé,<br><em>le parcours de ses tirs</em></h1>',
 }
+
+
+# version claire (/projet/mbappe_tirs/clair/) : le thème local, fond beige uni, même navigation
+SITE_CLAIR = {k: v for k, v in SITE.items() if k != '<h1>Kylian Mbappé,<br>le parcours de ses tirs</h1>'}
+SITE_CLAIR['<!--__HEAD__-->'] = SITE['<!--__HEAD__-->'].replace(f'content="{SITE_URL}"', f'content="{SITE_URL}clair/"').replace(
+    '\n<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">', '')
+SITE_CLAIR['/*__THEME__*/'] = (HERE / 'site_theme_clair.css').read_text()
+SITE_CLAIR['<!--__NAV__-->'] = SITE['<!--__NAV__-->'].replace('href="clair/">Version claire', 'href="../">Version sombre')
 
 
 if __name__ == '__main__':

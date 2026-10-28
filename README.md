@@ -94,3 +94,15 @@ seconde sans dépendre de l'horloge réelle, donc l'animation reste fluide. ffmp
 
 Déroulé (22 s) : chaque phase s'ouvre en 1,5 s puis reste 1 s à l'écran, avec une caméra qui suit la colonne
 ouverte. La fin recule pour montrer toute la fresque. Les durées se règlent dans `TL`, dans `interactive_template.html`.
+
+## 5. Publication sur data-workers.com : `deploy.sh`
+
+```bash
+./visuel_mbappe/deploy.sh            # régénère et publie les deux versions + la vignette
+./visuel_mbappe/deploy.sh --index    # publie aussi la page /projet/ (site/projet_index.html)
+```
+
+- **Version sombre** (`site/index.html` → `/projet/mbappe_tirs/`) : couleurs du site (`site_theme.css`).
+- **Version claire** (`site/clair/index.html` → `/projet/mbappe_tirs/clair/`) : le thème local, même fond beige, sans
+  la grille (`site_theme_clair.css`).
+- Un bouton « Version claire » / « Version sombre » dans la barre de navigation passe de l'une à l'autre.
