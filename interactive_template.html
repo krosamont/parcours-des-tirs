@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parcours des tirs Mbappé</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Arvo:wght@400;700&display=block" rel="stylesheet">
+<!--__HEAD__-->
+<style>
+:root {
+  --paper: #ebe7de; --grid: rgba(120,110,95,.10); --ink: #1d1b19; --muted: #6f6a62;
+  --made: #5470c8; --miss: #cf6266; --label: rgba(246,243,236,.9); --made-ink: #3d58a8; --miss-ink: #b0353b;
+  --ink2: #3b3833; --ink3: #4a463f; --bar: #151413; --faint: #9a948a; --font: 'Arvo', Rockwell, Georgia, serif;
+  --panel: rgba(246,243,236,.75); --pitch: rgba(255,255,255,.35); --zone: rgba(29,27,25,.05); --zone-hover: rgba(29,27,25,.08);
+  --tip-bg: #1d1b19; --tip-ink: #f3efe6; --label-bg: #fff; --label-ink: #1d1b19; --label-ink2: #4a463f; --pick: #ffd84a;
+  --frame: #c2393f; --frame-bg: #f6f3ec; --blend: multiply; --radius: 2px; --on-bg: var(--ink); --on-ink: var(--paper);
+  --made-txt: var(--made-ink); --miss-txt: var(--miss-ink);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; color: var(--ink); font-family: var(--font); }
+body {
+  background-color: var(--paper);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 40px 40px; min-height: 100vh;
+}
+header { display: flex; flex-wrap: wrap; gap: 24px 36px; align-items: flex-start; padding: 28px 40px 8px; }
+.left { flex: 1 1 480px; min-width: 0; }
+h1 { margin: 0; font-size: clamp(30px, 3.6vw, 52px); line-height: 1.03; letter-spacing: -.5px; text-shadow: 2px 2px 0 rgba(0,0,0,.08); }
+.sub { margin-top: 10px; font-size: 16px; color: var(--muted); }
+.filters { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 10px 22px; font-size: 14px; }
+.grp { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.grp span { color: var(--muted); margin-right: 4px; }
+button, .btn { font: inherit; font-size: 13px; border: 1.5px solid var(--ink); background: transparent; color: var(--ink);
+  padding: 5px 11px; cursor: pointer; border-radius: var(--radius); text-decoration: none; display: inline-block; }
+button.on { background: var(--on-bg); color: var(--on-ink); border-color: var(--on-bg); }
+button:disabled { opacity: .35; cursor: default; }
+.trail { margin-top: 18px; padding: 14px 16px; background: var(--panel); border-left: 4px solid var(--ink); max-width: 760px; }
+.crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 15px; font-weight: 700; }
+.crumbs .chip { cursor: pointer; border-bottom: 2px solid transparent; }
+.crumbs .chip:hover { border-bottom-color: var(--ink); }
+.crumbs .sep { color: var(--muted); font-weight: 400; }
+.crumbs .stage { font-weight: 400; color: var(--muted); font-size: 12px; margin-right: 2px; }
+.stats { margin-top: 6px; font-size: 14px; color: var(--ink2); }
+.stats b.g { color: var(--made-txt); } .stats b.m { color: var(--miss-txt); }
+.ctrl { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+.hint { margin-top: 8px; font-size: 13px; color: var(--muted); font-style: italic; }
+#map { flex: 1 1 520px; min-width: 0; width: 100%; max-width: 820px; height: auto; }
+.photo { flex: 0 0 auto; width: 210px; height: 210px; border: 4px solid var(--frame); background: var(--frame-bg); box-shadow: 4px 4px 0 rgba(0,0,0,.12); overflow: hidden; }
+.photo img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.wrap { overflow-x: auto; overflow-y: hidden; padding-bottom: 10px; }
+#flow { display: block; width: max(100%, 2200px); height: auto; }
+.node { cursor: pointer; }
+.node:hover .bar { opacity: .75; }
+.node-label rect { fill: var(--label-bg); }
+.node-label .n { font-weight: 700; font-size: 24px; fill: var(--label-ink); }
+.node-label .c { font-size: 16px; fill: var(--label-ink2); }
+.node-label .g { font-size: 15px; fill: var(--made-ink); }
+.node-label .m { font-size: 15px; fill: var(--miss-ink); }
+.off .bar, rect.off { opacity: .3; }
+.picked .node-label rect { fill: var(--pick); stroke: var(--label-ink); stroke-width: 1.5; }
+.axis { font-weight: 700; font-size: 28px; fill: var(--ink2); letter-spacing: 1px; }
+.axis.todo { opacity: .22; }
+.link { mix-blend-mode: var(--blend); transition: opacity .3s ease; }
+.ghost { pointer-events: none; isolation: isolate; transition: opacity .38s ease; }
+.next-hint { font-size: 22px; font-style: italic; fill: var(--muted); }
+.fadein { opacity: 0; animation: fade .55s cubic-bezier(.2,.7,.2,1) .5s forwards; }
+@keyframes fade { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .fadein { animation-duration: .01s; animation-delay: 0s; } .ghost, .link { transition: none; } }
+.zone-hit { cursor: pointer; fill: transparent; }
+.zone-hit:hover { fill: var(--zone-hover); }
+.tip { position: fixed; pointer-events: none; background: var(--tip-bg); color: var(--tip-ink); font-size: 13px; padding: 8px 10px; border-radius: 3px;
+  line-height: 1.45; opacity: 0; transition: opacity .1s; max-width: 280px; z-index: 5; }
+.tip b { font-size: 14px; }
+@media (max-width: 700px) {
+  header { position: relative; padding: 16px 16px 4px; gap: 14px; }
+  .left { flex-basis: 100%; }
+  h1 { padding-right: 96px; font-size: 27px; }
+  .sub { font-size: 13px; }
+  .filters { font-size: 12px; gap: 8px 14px; }
+  button, .btn { font-size: 12px; padding: 6px 9px; }
+  .trail { padding: 10px 12px; }
+  .crumbs { font-size: 13px; }
+  .stats { font-size: 12.5px; }
+  .photo { position: absolute; top: 14px; right: 16px; width: 84px; height: 84px; border-width: 3px; }
+  #map { flex-basis: 100%; max-width: none; }
+  #map .tag { display: none; }
+  /* environ deux colonnes à l'écran, la page défile vers la phase ouverte */
+  #flow { width: 345vw; }
+  .node-label .n { font-size: 36px; }
+  .node-label .c { font-size: 25px; }
+  .node-label .g, .node-label .m { font-size: 23px; }
+  .axis { font-size: 40px; }
+  .next-hint { font-size: 34px; }
+}
+/* ---- vidéo 1080×1350 (format 4:5 des réseaux) ---- */
+body.video { width: 1080px; height: 1350px; overflow: hidden; position: relative; }
+.video header { padding: 54px 60px 0; height: 330px; display: block; position: relative; }
+.video h1 { font-size: 56px; max-width: 720px; }
+.video .sub { font-size: 21px; margin-top: 16px; max-width: 700px; }
+.video .filters, .video .trail, .video #map, .video .tip { display: none; }
+.video .photo { position: absolute; right: 60px; top: 46px; width: 240px; height: 240px; }
+.video .wrap { position: absolute; left: 0; top: 330px; width: 1080px; height: 900px; overflow: hidden; padding: 0; }
+.video #flow { width: 2960px; height: 1040px; transform-origin: 0 0; }
+.vfoot { display: none; }
+.video .vfoot { display: flex; position: absolute; left: 60px; right: 60px; bottom: 34px; align-items: center; justify-content: space-between; font-size: 22px; }
+.vfoot .leg { display: flex; gap: 26px; align-items: center; }
+.vfoot .leg i { display: inline-block; width: 34px; height: 18px; margin-right: 10px; vertical-align: -2px; }
+.vfoot .ph { font-weight: 700; font-size: 26px; letter-spacing: .5px; }
+.vfoot .src { position: absolute; right: 0; bottom: -24px; font-size: 13px; color: var(--muted); }
+/*__THEME__*/
+</style>
+</head>
+<body>
+<header>
+  <div class="left">
+    <!--__NAV__-->
+    <h1>Kylian Mbappé,<br>le parcours de ses tirs</h1>
+    <div class="sub" id="sub"></div>
+    <div class="filters" id="filters"></div>
+    <div class="trail">
+      <div class="crumbs" id="crumbs"></div>
+      <div class="stats" id="stats"></div>
+      <div class="ctrl">
+        <button id="back">← Retour</button>
+        <button id="reset">Recommencer</button>
+        <a class="btn full" href="fresque_mbappe.html">Voir la fresque complète</a>
+      </div>
+      <div class="hint" id="hint"></div>
+    </div>
+  </div>
+  <svg id="map" viewBox="0 0 900 262"></svg>
+  <div class="photo"><img src="__PHOTO__" alt="Kylian Mbappé"></div>
+</header>
+<div class="wrap" id="wrap"><svg id="flow" viewBox="0 0 2960 1040"></svg></div>
+<!--__FOOT__-->
+<div class="tip" id="tip"></div>
+<div class="vfoot"><div class="leg"><span><i style="background:var(--made)"></i>But</span><span><i style="background:var(--miss)"></i>Raté</span></div>
+  <div class="ph" id="ph"></div><div class="src">Données : WhoScored × FotMob</div></div>
+<script>
+const SHOTS = /*__SHOTS__*/[];
+const W = 2960, HH = 1040, TOP = 40, H = 840, GAP = 36, BAR = 12;
+const COLS = [300, 700, 1100, 1500, 1920, 2320, 2720];
+const SIT = ['Jeu placé', 'Contre-attaque', 'Penalty', 'Corner', 'Coup franc direct', 'Autre CPA', 'Action individuelle'];
+const STAGES = [
+  { key: 'zone',  title: 'ZONE', order: ['Surface de but', 'Surface · axe', 'Surface · gauche', 'Surface · droite', 'Point de penalty', 'Hors surface'] },
+  { key: 'sit',   title: 'SITUATION', order: SIT },
+  { key: 'body',  title: 'SURFACE', order: ['Pied droit', 'Pied gauche', 'Tête'] },
+  { key: 'res',   title: 'RÉSULTAT', order: ['But', 'Raté'] },
+  { key: 'pass',  title: 'PASSEUR', goalsOnly: true, order: null },
+  { key: 'how',   title: 'COMMENT IL A MARQUÉ', goalsOnly: true, order: ['Pied droit', 'Pied gauche', 'Tête'] },
+  { key: 'phase', title: 'PHASE DU BUT', goalsOnly: true, order: SIT },
+];
+const SEASONS = [['all', 'Tout'], ['2024-2025', '2024-25'], ['2025-2026', '2025-26'], ['2026-2027', '2026-27']];
+const COMPS = [['all', 'Toutes'], ['laliga', 'Liga'], ['champions-league', 'Ligue des champions']];
+const qs = new URLSearchParams(location.search);
+// mode 'full' : chaque clic ouvre toute la phase suivante (tous les flux) ; mode 'path' : seul le bloc cliqué se déroule
+const state = { season: 'all', comp: 'all', mode: qs.get('path') || qs.get('mode') === 'path' ? 'path' : 'full',
+                path: qs.get('path') ? qs.get('path').split('|') : [], depth: Math.max(1, +qs.get('depth') || 1), focus: null };
+const NS = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('flow'), map = document.getElementById('map'), tip = document.getElementById('tip'), wrap = document.getElementById('wrap');
+const pct = (n, t) => t ? Math.round(100 * n / t) + '%' : '–';
+const plural = (n, w) => `${n} ${w}${n > 1 ? 's' : ''}`;
+const color = goal => goal ? 'var(--made)' : 'var(--miss)';
+let SHOTS_F = [];
+const HOVER = matchMedia('(hover: hover)').matches;
+const MOBILE = matchMedia('(max-width: 700px)');
+const VB0 = () => MOBILE.matches && !VIDEO ? -150 : 0;   // sur mobile les étiquettes de la 1re colonne débordent à gauche
+const VIDEO = new URLSearchParams(location.search).has('video');
+let VP = null;   // mode vidéo : avancement (0..1) de la colonne en cours d'ouverture, imposé image par image
+
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+
+// ---------- données ----------
+function prepare() {
+  SHOTS_F = SHOTS.filter(s => (state.season === 'all' || s.season === state.season) && (state.comp === 'all' || s.comp === state.comp))
+                 .map(s => ({ ...s, res: s.goal ? 'But' : 'Raté', how: s.goal ? s.body : null, phase: s.goal ? s.sit : null, pass: null }));
+  const goals = SHOTS_F.filter(s => s.goal), count = {};
+  goals.forEach(s => { if (s.ast) count[s.ast] = (count[s.ast] || 0) + 1; });
+  const top = Object.keys(count).sort((a, b) => count[b] - count[a] || a.localeCompare(b)).slice(0, 7);
+  goals.forEach(s => { s.pass = !s.ast ? 'Sans passeur' : top.includes(s.ast) ? s.ast : 'Autres'; });
+  STAGES[4].order = ['Sans passeur', ...top, 'Autres'];
+}
+const matches = (s, n) => state.path.slice(0, n).every((v, i) => s[STAGES[i].key] === v);
+const subset = n => SHOTS_F.filter(s => matches(s, n));
+// tirs mis en avant (carte, panneau) : le chemin en mode sélection, le bloc cliqué en mode phase
+function selection() {
+  if (state.mode === 'path') return subset(state.path.length);
+  if (!state.focus) return SHOTS_F;
+  return SHOTS_F.filter(s => s[STAGES[state.focus.i].key] === state.focus.name);
+}
+
+// mode phase : même mise en page que la fresque (une échelle pour les tirs, un zoom pour les buts), colonnes ouvertes une à une
+function columnsFull() {
+  const all = STAGES.map((st, i) => {
+    const pool = st.goalsOnly ? SHOTS_F.filter(s => s.goal) : SHOTS_F;
+    const nodes = st.order.map(name => ({ name, shots: pool.filter(s => s[st.key] === name) })).filter(n => n.shots.length);
+    nodes.forEach((n, j) => { n.idx = j; n.goals = n.shots.filter(s => s.goal).length; });
+    return { i, st, x: COLS[i], nodes, pool, picked: null };
+  }).filter(c => c.pool.length);
+  const scale = g => Math.min(...g.map(c => (H - GAP * (c.nodes.length - 1)) / c.pool.length));
+  const k1 = scale(all.filter(c => !c.st.goalsOnly)), k2 = scale(all.filter(c => c.st.goalsOnly).concat(all.slice(0, 1)));
+  all.forEach(c => {
+    c.k = c.st.goalsOnly ? k2 : k1;
+    let y = TOP + (H - c.pool.length * c.k - GAP * (c.nodes.length - 1)) / 2;
+    c.nodes.forEach(n => { n.y = y; n.h = n.shots.length * c.k; y += n.h + GAP; });
+    c.focus = state.focus && state.focus.i === c.i ? c.nodes.find(n => n.name === state.focus.name) : null;
+  });
+  return all.slice(0, state.depth);
+}
+
+function linksFull(a, b) {
+  const m = new Map();
+  for (const s of b.pool) {
+    const src = a.nodes.find(n => n.name === s[a.st.key]), tgt = b.nodes.find(n => n.name === s[b.st.key]), key = `${src.idx}|${tgt.idx}|${s.goal}`;
+    if (!m.has(key)) m.set(key, { src, tgt, goal: s.goal, n: 0 });
+    m.get(key).n++;
+  }
+  const ls = [...m.values()];
+  for (const n of a.nodes) {
+    let y = n.y;
+    ls.filter(l => l.src === n).sort((p, q) => q.goal - p.goal || p.tgt.idx - q.tgt.idx).forEach(l => { l.sy = y; l.sw = l.n * a.k; y += l.sw; });
+  }
+  for (const n of b.nodes) {
+    let y = n.y;
+    ls.filter(l => l.tgt === n).sort((p, q) => q.goal - p.goal || p.src.idx - q.src.idx).forEach(l => { l.ty = y; l.tw = l.n * b.k; y += l.tw; });
+  }
+  return ls;
+}
+
+// colonnes affichées : la colonne i montre les tirs qui suivent le chemin choisi jusqu'à i-1, rééchelonnés sur toute la hauteur
+function columns() {
+  const cols = [];
+  for (let i = 0; i < STAGES.length && i <= state.path.length; i++) {
+    const st = STAGES[i];
+    let pool = subset(i);
+    if (st.goalsOnly) pool = pool.filter(s => s.goal);
+    if (!pool.length) break;
+    const nodes = st.order.map(name => ({ name, shots: pool.filter(s => s[st.key] === name) })).filter(n => n.shots.length);
+    const k = (H - GAP * (nodes.length - 1)) / pool.length;
+    let y = TOP + (H - pool.length * k - GAP * (nodes.length - 1)) / 2;
+    nodes.forEach((n, j) => { n.idx = j; n.goals = n.shots.filter(s => s.goal).length; n.y = y; n.h = n.shots.length * k; y += n.h + GAP; });
+    cols.push({ i, st, x: COLS[i], nodes, k, pool, picked: nodes.find(n => n.name === state.path[i]) });
+  }
+  return cols;
+}
+
+function links(a, b) {
+  // seul le bloc choisi dans la colonne a se déroule vers b
+  const src = a.picked, map_ = new Map();
+  for (const s of b.pool) {
+    const tgt = b.nodes.find(n => n.name === s[b.st.key]), key = `${tgt.idx}|${s.goal}`;
+    if (!map_.has(key)) map_.set(key, { src, tgt, goal: s.goal, n: 0 });
+    map_.get(key).n++;
+  }
+  const ls = [...map_.values()];
+  let y = src.y;
+  ls.slice().sort((p, q) => q.goal - p.goal || p.tgt.idx - q.tgt.idx).forEach(l => { l.sy = y; l.sw = l.n * a.k; y += l.sw; });
+  for (const n of b.nodes) {
+    let ty = n.y;
+    ls.filter(l => l.tgt === n).sort((p, q) => q.goal - p.goal).forEach(l => { l.ty = ty; l.tw = l.n * b.k; ty += l.tw; });
+  }
+  return ls;
+}
+
+// ---------- dessin ----------
+function band(x0, y0, w0, x1, y1, w1) {
+  const m = (x0 + x1) / 2;
+  return `M${x0},${y0} C${m},${y0} ${m},${y1} ${x1},${y1} L${x1},${y1 + w1} C${m},${y1 + w1} ${m},${y0 + w0} ${x0},${y0 + w0} Z`;
+}
+
+function label(parent, x, yc, anchor, lines) {
+  const g = el('g', { class: 'node-label' }, parent);
+  const bg = el('rect', {}, g);
+  let y = 0;
+  lines.forEach(([cls, txt], i) => {
+    y += i === 0 ? 0 : (cls === 'c' ? 21 : 19) * (MOBILE.matches ? 1.5 : 1);
+    const t = el('text', { class: cls, x, y, 'text-anchor': anchor }, g); t.textContent = txt;
+  });
+  const bb = g.getBBox();
+  bg.setAttribute('x', bb.x - 7); bg.setAttribute('y', bb.y - 4); bg.setAttribute('width', bb.width + 14); bg.setAttribute('height', bb.height + 8);
+  return { g, off: bb.y, h: bb.height + 8, top: yc - bb.height / 2 - 4 };
+}
+
+function place(labels) {
+  labels.sort((a, b) => a.top - b.top);
+  for (let i = 1; i < labels.length; i++) labels[i].top = Math.max(labels[i].top, labels[i - 1].top + labels[i - 1].h + 3);
+  const last = labels.length - 1, over = last >= 0 ? labels[last].top + labels[last].h - (TOP + H + 20) : 0;
+  if (over > 0) {
+    labels[last].top -= over;
+    for (let i = last - 1; i >= 0; i--) labels[i].top = Math.min(labels[i].top, labels[i + 1].top - labels[i].h - 3);
+  }
+  labels.forEach(l => l.g.setAttribute('transform', `translate(0,${l.top + 4 - l.off})`));
+}
+
+function nodeLines(c, n) {
+  const tot = n.shots.length, base = c.pool.length, st = c.st;
+  const lines = [['n', n.name], ['c', `${tot}  (${pct(tot, base)}${st.goalsOnly ? ' des buts' : ''})`]];
+  if (st.key === 'res' && n.name === 'Raté') {
+    const t = k => n.shots.filter(s => s.type === k).length;
+    lines.push(['m', `${t('Arrêté')} arrêtés · ${t('Hors cadre')} hors cadre · ${t('Poteau')} poteaux`]);
+  } else if (st.key === 'res') {
+    const xg = c.pool.reduce((a, s) => a + (s.xg || 0), 0);
+    lines.push(['g', `xG cumulé ${xg.toFixed(1)} → ${tot - xg >= 0 ? '+' : ''}${(tot - xg).toFixed(1)} buts`]);
+  } else if (st.key === 'how') {
+    lines.push(['g', `dont ${n.shots.filter(s => s.ftouch).length} en une touche`]);
+  } else if (st.key === 'phase') {
+    const all = SHOTS_F.filter(s => s.sit === n.name).length;
+    lines.push(['g', `sur ${all} tirs · ${pct(tot, all)} de réussite`]);
+  } else if (st.key !== 'pass') {
+    lines.push(['g', `${plural(n.goals, 'but')} · ${pct(n.goals, tot)} de réussite`]);
+  }
+  return lines;
+}
+
+// la phase ouverte se dévoile de gauche à droite derrière un bord fondu
+function reveal(g, x0, x1) {
+  const defs = svg.querySelector('defs'), id = 'rv' + Math.random().toString(36).slice(2), F = 220, D = 1050;
+  const grad = el('linearGradient', { id: id + 'g', gradientUnits: 'userSpaceOnUse', x1: x0 - F, x2: x0, y1: 0, y2: 0 }, defs);
+  el('stop', { offset: 0, 'stop-color': '#fff' }, grad);
+  el('stop', { offset: 1, 'stop-color': '#000' }, grad);
+  const mask = el('mask', { id, maskUnits: 'userSpaceOnUse', x: 0, y: 0, width: W, height: HH }, defs);
+  el('rect', { x: 0, y: 0, width: W, height: HH, fill: `url(#${id}g)` }, mask);
+  g.setAttribute('mask', `url(#${id})`);
+  const ease = p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+  const t0 = performance.now();
+  const step = t => {
+    const p = Math.min(1, (t - t0) / D), edge = x0 + (x1 - x0 + F) * ease(p);
+    grad.setAttribute('x1', edge - F); grad.setAttribute('x2', edge);
+    if (p < 1) requestAnimationFrame(step); else g.removeAttribute('mask');
+  };
+  requestAnimationFrame(step);
+}
+
+function hover(elm, html) {
+  if (!HOVER) return;
+  elm.addEventListener('mouseenter', ev => { tip.innerHTML = html; tip.style.opacity = 1; moveTip(ev); });
+  elm.addEventListener('mousemove', moveTip);
+  elm.addEventListener('mouseleave', () => { tip.style.opacity = 0; });
+}
+function moveTip(ev) {
+  const r = tip.getBoundingClientRect();
+  tip.style.left = Math.min(ev.clientX + 14, innerWidth - r.width - 8) + 'px';
+  tip.style.top = Math.min(ev.clientY + 14, innerHeight - r.height - 8) + 'px';
+}
+
+function pick(i, name) {
+  const again = state.path[i] === name && state.path.length === i + 1;
+  state.path = state.path.slice(0, i);
+  if (!again) state.path.push(name);
+  draw(again ? -1 : i + 1);
+}
+
+// mode phase : un clic sur la dernière colonne ouvre la suivante, un clic sur une colonne précédente referme ce qui suit
+function openFull(i, name) {
+  const same = state.focus && state.focus.i === i && state.focus.name === name;
+  if (i === state.depth - 1 && state.depth < STAGES.length) { state.depth++; state.focus = { i, name }; return draw(state.depth - 1); }
+  if (i < state.depth - 1) { state.depth = i + 1; state.focus = { i, name }; return draw(); }
+  state.focus = same ? null : { i, name };
+  draw();
+}
+const FULL = () => state.mode === 'full';
+function mapPick(z) {
+  if (!FULL()) return pick(0, z);
+  state.focus = state.focus && state.focus.i === 0 && state.focus.name === z ? null : { i: 0, name: z };
+  draw();
+}
+
+function draw(animate = -1, smooth = true) {
+  const cols = FULL() ? columnsFull() : columns();
+  // l'état précédent reste par-dessus et s'efface pendant que le nouveau apparaît
+  const prev = [...svg.childNodes].filter(n => n.nodeName !== 'defs');
+  svg.innerHTML = '<defs></defs>';
+  svg.setAttribute('viewBox', `${VB0()} 0 ${W - VB0()} ${HH}`);
+  tip.style.opacity = 0;
+  const last = cols[cols.length - 1];
+  // tous les flux dessous, tous les blocs et étiquettes dessus (sinon les flux teintent les étiquettes)
+  const layerL = el('g', {}, svg), layerN = el('g', {}, svg);
+  cols.forEach((c, ci) => {
+    const gl = el('g', {}, layerL), gn = el('g', {}, layerN), gt = gn;
+    // amorces à gauche de la première colonne
+    if (ci === 0) for (const n of c.nodes) {
+      const hg = n.goals * c.k, off = c.picked && c.picked !== n ? ' off' : '';
+      el('rect', { class: 'link' + off, x: 0, y: n.y, width: c.x, height: hg, fill: color(1), opacity: .85 }, gl);
+      el('rect', { class: 'link' + off, x: 0, y: n.y + hg, width: c.x, height: n.h - hg, fill: color(0), opacity: .85 }, gl);
+    }
+    if (ci > 0) for (const l of (FULL() ? linksFull : links)(cols[ci - 1], c)) {
+      const f = state.focus && FULL() ? (cols.some(cc => cc.focus && (cc.focus === l.src || cc.focus === l.tgt)) ? .9 : .4) : .75;
+      const p = el('path', { class: 'link', d: band(cols[ci - 1].x, l.sy, l.sw, c.x, l.ty, l.tw), fill: color(l.goal), opacity: f }, gl);
+      hover(p, `<b>${l.src.name} → ${l.tgt.name}</b><br>${plural(l.n, l.goal ? 'but' : 'tir raté')}`);
+    }
+    // amorces à droite de la dernière colonne ouverte : il reste une phase à dérouler
+    if (c === last && (FULL() || !c.picked || c.i === STAGES.length - 1)) for (const n of c.nodes) {
+      const hg = n.goals * c.k, w = c.i === STAGES.length - 1 ? W - c.x : 70;
+      el('rect', { x: c.x, y: n.y, width: w, height: hg, fill: color(1), opacity: c.i === STAGES.length - 1 ? .85 : .35 }, gl);
+      el('rect', { x: c.x, y: n.y + hg, width: w, height: n.h - hg, fill: color(0), opacity: .35 }, gl);
+    }
+    const placed = [];
+    for (const n of c.nodes) {
+      const cls = FULL() ? (c.focus === n ? ' picked' : '') : c.picked ? (c.picked === n ? ' picked' : ' off') : '';
+      const g1 = el('g', { class: 'node' + cls }, gn);
+      el('rect', { x: c.x - 60, y: n.y, width: 120, height: Math.max(n.h, 14), fill: 'transparent' }, g1);
+      el('rect', { class: 'bar', x: c.x - BAR / 2, y: n.y, width: BAR, height: Math.max(n.h, 2), fill: 'var(--bar)' }, g1);
+      const lab = label(g1, ci === 0 ? c.x - 18 : c.x + 18, n.y + n.h / 2, ci === 0 ? 'end' : 'start', nodeLines(c, n));
+      placed.push(lab);
+      g1.addEventListener('click', () => FULL() ? openFull(c.i, n.name) : pick(c.i, n.name));
+      hover(g1, `<b>${n.name}</b><br>${plural(n.shots.length, c.st.goalsOnly ? 'but' : 'tir')}` +
+                (c.st.goalsOnly ? '' : ` · ${plural(n.goals, 'but')}`) +
+                (c.i === STAGES.length - 1 ? '' : !FULL() || c === last ? '<br><i>clique pour dérouler la suite</i>' : '<br><i>clique pour refermer les phases suivantes</i>'));
+    }
+    place(placed);
+    if (c.i === animate && VP !== null) {
+      const ease = p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+      const x0 = cols[ci - 1] ? cols[ci - 1].x : 0, x1 = c.x + 420, F = 220, edge = x0 + (x1 - x0 + F) * ease(Math.min(1, VP / .8));
+      const id = 'v' + c.i, defs = svg.querySelector('defs');
+      const grad = el('linearGradient', { id: id + 'g', gradientUnits: 'userSpaceOnUse', x1: edge - F, x2: edge, y1: 0, y2: 0 }, defs);
+      el('stop', { offset: 0, 'stop-color': '#fff' }, grad); el('stop', { offset: 1, 'stop-color': '#000' }, grad);
+      el('rect', { x: -500, y: 0, width: W + 1000, height: HH, fill: `url(#${id}g)` }, el('mask', { id, maskUnits: 'userSpaceOnUse', x: -500, y: 0, width: W + 1000, height: HH }, defs));
+      gl.setAttribute('mask', `url(#${id})`);
+      const o = Math.max(0, Math.min(1, (VP - .45) / .4)), oe = 1 - Math.pow(1 - o, 3);
+      gn.setAttribute('opacity', oe); gn.setAttribute('transform', `translate(${(oe - 1) * 16},0)`);
+    } else if (c.i === animate) {
+      reveal(gl, cols[ci - 1] ? cols[ci - 1].x : 0, c.x + 420);
+      gn.classList.add('fadein');
+    }
+  });
+  // titres de colonnes : celles à venir restent pâles
+  STAGES.forEach((st, i) => {
+    const t = el('text', { class: 'axis' + (i < cols.length ? '' : ' todo'), x: COLS[i], y: TOP + H + 75, 'text-anchor': 'middle' }, svg);
+    t.textContent = st.title;
+  });
+  // invitation à continuer
+  const nx = COLS[cols.length], hint = document.getElementById('hint');
+  let msg = '', parts = null;
+  if (FULL()) {
+    if (cols.length < STAGES.length) {
+      parts = ['← clique sur un bloc', `pour ouvrir : ${STAGES[cols.length].title.toLowerCase()}`];
+      msg = `Clique sur un bloc de la dernière colonne pour ouvrir toute la phase suivante (${STAGES[cols.length].title.toLowerCase()})` +
+            (cols.length > 1 ? ' · reclique sur une colonne précédente pour refermer.' : '.');
+    } else msg = 'Fin du parcours · reclique sur une colonne précédente pour refermer.';
+  } else {
+    if (last.picked && last.picked.name === 'Raté' && last.st.key === 'res') msg = 'Les tirs ratés s\'arrêtent ici.';
+    else if (cols.length < STAGES.length && !last.picked) { msg = `Clique sur un bloc pour dérouler : ${STAGES[cols.length].title.toLowerCase()}`; parts = ['← clique sur un bloc', `pour dérouler : ${STAGES[cols.length].title.toLowerCase()}`]; }
+    else if (cols.length === STAGES.length) msg = 'Fin du parcours.';
+    if (msg && state.path.length) msg += ' · Clique à nouveau sur un bloc choisi pour le refermer.';
+  }
+  if (nx && (parts || !FULL()) && !VIDEO) {
+    const t = el('text', { class: 'next-hint fadein', x: nx - 30, y: TOP + H / 2, 'text-anchor': 'start' }, svg);
+    (parts || (msg ? ['← ' + msg.split(' · ')[0]] : [])).forEach((p, j) => { const ts = el('tspan', { x: nx - 30, dy: j ? 30 : 0 }, t); ts.textContent = p; });
+  }
+  hint.textContent = msg;
+  // légende
+  const lg = el('g', { transform: `translate(${W / 2 - 160},${TOP + H + 140})`, display: VIDEO ? 'none' : 'inline' }, svg);
+  [['But', 1], ['Raté', 0]].forEach(([t, gl_], j) => {
+    el('rect', { x: j * 190, y: -16, width: 38, height: 20, fill: color(gl_) }, lg);
+    const tx = el('text', { x: j * 190 + 50, y: 1, 'font-size': 24, fill: 'var(--ink2)' }, lg); tx.textContent = t;
+  });
+  if (prev.length && smooth) {
+    const ghost = el('g', { class: 'ghost' }, svg);
+    prev.forEach(n => ghost.appendChild(n));
+    ghost.getBoundingClientRect();
+    requestAnimationFrame(() => { ghost.style.opacity = 0; });
+    setTimeout(() => ghost.remove(), 450);
+  }
+  panel();
+  pitch();
+  if (animate > 0 && !VIDEO) {
+    const scale = svg.getBoundingClientRect().width / (W - VB0());
+    wrap.scrollTo({ left: Math.max(0, (COLS[animate] + 420 - VB0()) * scale - wrap.clientWidth), behavior: 'smooth' });
+  }
+}
+
+// ---------- panneau : chemin choisi + chiffres ----------
+function panel() {
+  const crumbs = document.getElementById('crumbs'), stats = document.getElementById('stats');
+  crumbs.innerHTML = '';
+  const add = (txt, cls, fn) => { const s = document.createElement('span'); s.className = cls; s.textContent = txt; if (fn) s.onclick = fn; crumbs.appendChild(s); return s; };
+  if (FULL()) {
+    add('Phases ouvertes :', 'stage');
+    STAGES.slice(0, state.depth).forEach((st, i) => {
+      if (i) add('›', 'sep');
+      add(st.title.toLowerCase(), 'chip', () => { state.depth = i + 1; if (state.focus && state.focus.i > i) state.focus = null; draw(); });
+    });
+    if (state.focus) { add('·', 'sep'); const c = add('', 'chip', () => { state.focus = null; draw(); }); c.innerHTML = `<span class="stage">bloc</span>${state.focus.name} ✕`; }
+  } else {
+    add('Tous les tirs', 'chip', () => { state.path = []; draw(); });
+    state.path.forEach((v, i) => {
+      add('›', 'sep');
+      const c = add('', 'chip', () => { state.path = state.path.slice(0, i + 1); draw(); });
+      c.innerHTML = `<span class="stage">${STAGES[i].title.toLowerCase()}</span>${v}`;
+    });
+  }
+  const sub = selection(), g = sub.filter(s => s.goal).length, xg = sub.reduce((a, s) => a + (s.xg || 0), 0);
+  stats.innerHTML = `${plural(sub.length, 'tir')} · <b class="g">${plural(g, 'but')}</b> · <b class="m">${plural(sub.length - g, 'raté')}</b> · ${pct(g, sub.length)} de réussite · ${xg.toFixed(1)} xG`;
+  const idle = FULL() ? state.depth === 1 && !state.focus : !state.path.length;
+  document.getElementById('back').disabled = idle;
+  document.getElementById('reset').disabled = idle;
+  const seasonTxt = state.season === 'all' ? '2024-25 → 2026-27' : SEASONS.find(s => s[0] === state.season)[1];
+  const compTxt = state.comp === 'all' ? 'Liga + Ligue des champions' : COMPS.find(c => c[0] === state.comp)[1];
+  document.getElementById('sub').textContent = `Real Madrid · ${compTxt} · ${seasonTxt} · ${SHOTS_F.length} tirs, ${SHOTS_F.filter(s => s.goal).length} buts`;
+}
+
+// ---------- carte des tirs (but en haut, gauche de l'attaquant à gauche) ----------
+function pitch() {
+  map.innerHTML = '';
+  map.setAttribute('viewBox', MOBILE.matches ? '214 8 474 250' : '0 0 900 262');
+  const K = 6.6, X0 = 226, Y0 = 18, XMIN = 72;
+  const sx = y => X0 + (68 - y) * K, sy = x => Y0 + (105 - x) * K;
+  const rect = (x0, x1, y0, y1, attrs, p = map) => el('rect', { x: sx(y1), y: sy(x1), width: (y1 - y0) * K, height: (x1 - x0) * K, ...attrs }, p);
+  const BX = 87.15, SX = 98.9, BY = [14.35, 53.65], SY = [25, 43];
+  const ZONES = { 'Surface de but': [SX, 105, SY[0], SY[1]], 'Surface · axe': [BX, SX, SY[0], SY[1]],
+                  'Surface · gauche': [BX, 105, SY[1], BY[1]], 'Surface · droite': [BX, 105, BY[0], SY[0]] };
+  const base = rect(XMIN, 105, 0, 68, { fill: 'var(--pitch)', stroke: 'var(--ink2)', 'stroke-width': 1.5, class: 'zone-hit' });
+  base.style.fill = 'var(--pitch)';
+  base.addEventListener('click', () => mapPick('Hors surface'));
+  for (const [x0, x1, y0, y1] of Object.values(ZONES)) rect(x0, x1, y0, y1, { fill: 'var(--zone)', stroke: 'var(--ink2)', 'stroke-width': 1, 'stroke-dasharray': '4 3' });
+  rect(BX, 105, BY[0], BY[1], { fill: 'none', stroke: 'var(--ink2)', 'stroke-width': 1.5 });
+  rect(105, 107, 30.34, 37.66, { fill: 'var(--ink2)' });
+  el('path', { d: `M${sx(34 + 5.5)},${sy(BX)} A${9.15 * K},${9.15 * K} 0 0 0 ${sx(34 - 5.5)},${sy(BX)}`, fill: 'none', stroke: 'var(--ink2)', 'stroke-width': 1.5 }, map);
+  const sel = new Set(selection());
+  for (const s of SHOTS_F.filter(s => s.zone !== 'Point de penalty' && s.x >= XMIN).sort((a, b) => sel.has(a) - sel.has(b) || a.goal - b.goal)) {
+    const on = sel.has(s);
+    el('circle', { cx: sx(s.y), cy: sy(s.x), r: on ? (s.goal ? 4.6 : 3.4) : 2.4, fill: on ? color(s.goal) : 'var(--faint)', opacity: on ? (s.goal ? .95 : .7) : .25, 'pointer-events': 'none' }, map);
+  }
+  for (const [z, b] of Object.entries(ZONES)) {
+    const h = rect(...b, { class: 'zone-hit' });
+    h.addEventListener('click', ev => { ev.stopPropagation(); mapPick(z); });
+  }
+  const pen = SHOTS_F.filter(s => s.zone === 'Point de penalty' && sel.has(s));
+  const pg = el('g', { style: 'cursor:pointer' }, map);
+  el('circle', { cx: sx(34), cy: sy(92.925), r: 9, fill: pen.length ? 'var(--made)' : 'var(--ink2)', opacity: pen.length ? .9 : .6 }, pg);
+  pg.addEventListener('click', () => mapPick('Point de penalty'));
+  // étiquettes reliées aux zones (chiffres de la sélection courante)
+  const tot = {};
+  sel.forEach(s => { tot[s.zone] = tot[s.zone] || [0, 0]; tot[s.zone][0]++; tot[s.zone][1] += s.goal; });
+  const tag = (z, side, ty, cx, cy) => {
+    const [n, g] = tot[z] || [0, 0], x = side < 0 ? sx(68) - 12 : sx(0) + 12;
+    const gg = el('g', { class: 'tag', style: 'cursor:pointer', opacity: n ? 1 : .35 }, map);
+    el('path', { d: `M${x + (side < 0 ? 4 : -4)},${ty - 4} L${sx(cy)},${sy(cx)}`, stroke: 'var(--ink2)', 'stroke-width': .8, fill: 'none', opacity: .6 }, gg);
+    const t = el('text', { x, y: ty, 'text-anchor': side < 0 ? 'end' : 'start', 'font-size': 14, fill: 'var(--ink2)' }, gg);
+    const a = el('tspan', { 'font-weight': 700, x, dy: 0 }, t); a.textContent = z;
+    const b = el('tspan', { fill: 'var(--made-txt)', x, dy: 17 }, t); b.textContent = `${n} tirs · ${plural(g, 'but')}`;
+    gg.addEventListener('click', () => mapPick(z));
+  };
+  tag('Surface de but', -1, Y0 + 22, 102, 38);
+  tag('Surface · gauche', -1, Y0 + 92, 95, 50);
+  tag('Surface · axe', -1, Y0 + 162, 92, 30);
+  tag('Surface · droite', 1, Y0 + 50, 95, 18);
+  tag('Point de penalty', 1, Y0 + 120, 92.925, 34);
+  tag('Hors surface', 1, Y0 + 196, 80, 22);
+}
+
+// ---------- filtres / commandes ----------
+function filters() {
+  const box = document.getElementById('filters');
+  box.innerHTML = '';
+  const grp = (label, opts, key) => {
+    const g = document.createElement('div'); g.className = 'grp';
+    g.innerHTML = `<span>${label}</span>`;
+    for (const [v, t] of opts) {
+      const b = document.createElement('button'); b.textContent = t; b.className = state[key] === v ? 'on' : '';
+      b.onclick = () => { state[key] = v; state.path = []; state.depth = 1; state.focus = null; filters(); prepare(); draw(); };
+      g.appendChild(b);
+    }
+    box.appendChild(g);
+  };
+  grp('Saison', SEASONS, 'season'); grp('Compétition', COMPS, 'comp');
+  grp('Déroulé', [['full', 'Toute la phase'], ['path', 'Ma sélection']], 'mode');
+}
+const back = () => {
+  if (FULL()) { if (state.focus && state.focus.i >= state.depth - 1) state.focus = null; else { state.depth = Math.max(1, state.depth - 1); state.focus = null; } }
+  else state.path.pop();
+  draw();
+};
+document.getElementById('back').onclick = back;
+document.getElementById('reset').onclick = () => { state.path = []; state.depth = 1; state.focus = null; draw(); wrap.scrollTo({ left: 0, behavior: 'smooth' }); };
+addEventListener('keydown', e => { if (e.key === 'Escape' || e.key === 'Backspace') back(); });
+
+filters(); prepare();
+MOBILE.addEventListener('change', () => draw(-1, false));
+// ---------- mode vidéo : window.__frame(t) dessine l'image à l'instant t (secondes), sans dépendre de l'horloge ----------
+const TL = { intro: .5, rev: 1.5, hold: 1.0, zoom: 1.4, end: 2.6 };
+const phaseStart = k => TL.intro + k * (TL.rev + TL.hold);
+const VIEW_W = 1080, VIEW_H = 900, SC = VIEW_H / HH;              // échelle de travail : ~3 colonnes à l'écran
+const camFor = d => Math.max(0, Math.min(W - VIEW_W / SC, COLS[d - 1] + 470 - VIEW_W / SC));
+window.__duration = phaseStart(STAGES.length - 1) + TL.rev + TL.hold + TL.zoom + TL.end;
+window.__frame = t => {
+  const ease = p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2, cl = v => Math.max(0, Math.min(1, v));
+  let k = 0;
+  while (k < STAGES.length - 1 && t >= phaseStart(k + 1)) k++;
+  const p = cl((t - phaseStart(k)) / TL.rev);
+  state.depth = k + 1; state.focus = null; VP = p;
+  draw(k, false);
+  // caméra : suit la colonne qui s'ouvre, puis recule pour montrer toute la fresque
+  let cam = k === 0 ? 0 : camFor(k) + (camFor(k + 1) - camFor(k)) * ease(cl(p / .8)), sc = SC, ty = 0;
+  const z = ease(cl((t - (phaseStart(STAGES.length - 1) + TL.rev + TL.hold)) / TL.zoom));
+  if (z > 0) { const sf = VIEW_W / W; sc = SC + (sf - SC) * z; cam *= 1 - z; ty = (VIEW_H - HH * sc) / 2 * z; }
+  svg.style.transform = `translate(${-cam * sc}px, ${ty}px) scale(${sc})`;
+  document.getElementById('ph').textContent = z > .5 ? 'Le parcours complet' : `Phase ${k + 1}/${STAGES.length} · ${STAGES[k].title}`;
+};
+if (VIDEO) document.body.classList.add('video');
+
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(() => { VIDEO ? window.__frame(+qs.get('t') || 0) : draw(); window.__ready = true; });
+</script>
+</body>
+</html>

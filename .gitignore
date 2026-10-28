@@ -1,0 +1,4 @@
+.DS_Store
+# rendus lourds, régénérés par render_video.js
+*.mp4
+*.gif

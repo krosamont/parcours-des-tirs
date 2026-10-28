@@ -1,0 +1,32 @@
+/* Version data-workers.com/projet/mbappe_tirs/ : couleurs et police du site (data-workers.com/style.css, page /projet/) */
+:root {
+  --paper: #070b15; --grid: rgba(255,255,255,.028); --ink: #f8fafc; --ink2: #cbd5e1; --ink3: #94a3b8; --muted: #94a3b8;
+  --made: #2dc4c2; --miss: #e8716d; --made-ink: #0f8a88; --miss-ink: #c2453f; --made-txt: #5fe0de; --miss-txt: #f2908c;
+  --bar: #e2e8f0; --faint: #475569; --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --panel: rgba(255,255,255,.05); --pitch: rgba(255,255,255,.03); --zone: rgba(45,196,194,.05); --zone-hover: rgba(45,196,194,.16);
+  --tip-bg: #0f172a; --tip-ink: #f8fafc; --label-bg: #f8fafc; --label-ink: #0b1020; --label-ink2: #334155; --pick: #ffd84a;
+  --frame: #2dc4c2; --frame-bg: #0b1020; --blend: normal; --radius: 999px; --on-bg: #2dc4c2; --on-ink: #070b15;
+  --line: rgba(255,255,255,.09);
+}
+body { background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(45,196,194,.12), transparent 70%),
+  linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: auto, 40px 40px, 40px 40px; background-attachment: scroll; }
+h1 { font-weight: 800; letter-spacing: -.02em; text-shadow: none; }
+h1 em { font-style: normal; color: var(--made); }
+.sitenav { display: flex; align-items: center; gap: 12px; margin-bottom: 26px; font-size: 14px; font-weight: 500; }
+.sitenav img { width: 32px; height: 32px; border-radius: 9px; }
+.sitenav a { color: var(--muted); text-decoration: none; }
+.sitenav a:hover { color: var(--ink); }
+.sitenav span { color: #475569; }
+button, .btn { border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--ink2); font-weight: 500; padding: 6px 13px; transition: border-color .2s, background .2s; }
+button:hover:not(:disabled), .btn:hover { border-color: rgba(45,196,194,.55); background: rgba(255,255,255,.08); }
+button.on { font-weight: 600; }
+.trail { border: 1px solid var(--line); border-left: 3px solid var(--made); border-radius: 16px; }
+.crumbs .chip:hover { border-bottom-color: var(--made); }
+.btn.full { display: none; }
+.photo { border-width: 3px; border-radius: 16px; box-shadow: 0 0 0 6px rgba(45,196,194,.08); }
+.picked .node-label rect { stroke: none; }
+.tip { border: 1px solid var(--line); border-radius: 10px; }
+.sitefoot { margin: 18px 40px 40px; padding-top: 18px; border-top: 1px solid var(--line); color: #64748b; font-size: 13px; }
+.sitefoot a { color: var(--muted); }
+@media (max-width: 700px) { .sitefoot { margin: 14px 16px 28px; } .sitenav { margin-bottom: 14px; } }
