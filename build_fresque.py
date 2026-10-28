@@ -22,7 +22,7 @@ BOX_X, SIX_X = 83 * 1.05, 94.2 * 1.05             # 87.15 m, 98.9 m
 BOX_Y, SIX_Y = (21.1 * .68, 78.9 * .68), (36.8 * .68, 63.2 * .68)
 
 SITUATION = {'RegularPlay': 'Jeu placé', 'FastBreak': 'Contre-attaque', 'Penalty': 'Penalty', 'FromCorner': 'Corner',
-             'FreeKick': 'Coup franc direct', 'SetPiece': 'Autre CPA', 'ThrowInSetPiece': 'Autre CPA', 'IndividualPlay': 'Action individuelle'}
+             'FreeKick': 'Coup franc direct', 'SetPiece': 'Autre CPA*', 'ThrowInSetPiece': 'Autre CPA*', 'IndividualPlay': 'Action individuelle'}
 BODY = {'RightFoot': 'Pied droit', 'LeftFoot': 'Pied gauche', 'Header': 'Tête'}
 TYPE = {'Goal': 'But', 'SavedShot': 'Arrêté', 'MissedShots': 'Hors cadre', 'ShotOnPost': 'Poteau'}
 SHORT = {'Vinícius Júnior': 'Vinícius', 'Brahim Díaz': 'Brahim', 'Trent Alexander-Arnold': 'Alexander-Arnold', 'Arda Güler': 'Güler'}

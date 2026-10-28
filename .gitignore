@@ -2,3 +2,4 @@
 # rendus lourds, régénérés par render_video.js
 *.mp4
 *.gif
+collage/_hd_*.png

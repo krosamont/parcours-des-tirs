@@ -49,6 +49,8 @@ button:disabled { opacity: .35; cursor: default; }
 .photo { flex: 0 0 auto; width: 200px; height: 200px; border: 4px solid var(--frame); background: var(--frame-bg); box-shadow: 4px 4px 0 rgba(0,0,0,.12); overflow: hidden; }
 .photo img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
 .wrap { overflow-x: auto; overflow-y: hidden; padding-bottom: 10px; }
+.note { margin: 6px 40px 0; font-size: 13px; color: var(--muted); }
+.video .note { display: none; }
 #flow { display: block; width: max(100%, 2200px); height: auto; }
 .node { cursor: pointer; }
 .node:hover .bar { opacity: .75; }
@@ -80,6 +82,7 @@ button:disabled { opacity: .35; cursor: default; }
   header #map { grid-area: map; justify-self: center; max-width: 1300px; }
 }
 @media (max-width: 700px) {
+  .note { margin: 4px 16px 0; font-size: 12px; }
   header { position: relative; padding: 16px 16px 4px; gap: 14px; }
   .left { flex-basis: 100%; }
   h1 { padding-right: 132px; font-size: 27px; }
@@ -142,15 +145,16 @@ body.video { width: 1080px; height: 1350px; overflow: hidden; position: relative
   <div class="photo"><img src="__PHOTO__" alt="Kylian Mbappé"></div>
 </header>
 <div class="wrap" id="wrap"><svg id="flow" viewBox="0 0 2960 1040"></svg></div>
+<p class="note">* CPA : coup de pied arrêté (coup franc indirect, touche, etc.). Les corners, les penalties et les coups francs directs sont comptés à part.</p>
 <!--__FOOT__-->
 <div class="tip" id="tip"></div>
 <div class="vfoot"><div class="leg"><span><i style="background:var(--made)"></i>But</span><span><i style="background:var(--miss)"></i>Raté</span></div>
-  <div class="ph" id="ph"></div><div class="src">Données : WhoScored × FotMob</div></div>
+  <div class="ph" id="ph"></div><div class="src">* CPA : coup de pied arrêté · Données : WhoScored × FotMob</div></div>
 <script>
 const SHOTS = /*__SHOTS__*/[];
 const W = 2960, HH = 1040, TOP = 40, H = 840, GAP = 36, BAR = 12;
 const COLS = [300, 700, 1100, 1500, 1920, 2320, 2720];
-const SIT = ['Jeu placé', 'Contre-attaque', 'Penalty', 'Corner', 'Coup franc direct', 'Autre CPA', 'Action individuelle'];
+const SIT = ['Jeu placé', 'Contre-attaque', 'Penalty', 'Corner', 'Coup franc direct', 'Autre CPA*', 'Action individuelle'];
 const STAGES = [
   { key: 'zone',  title: 'ZONE', order: ['Surface de but', 'Surface · axe', 'Surface · gauche', 'Surface · droite', 'Point de penalty', 'Hors surface'] },
   { key: 'sit',   title: 'SITUATION', order: SIT },
@@ -407,7 +411,8 @@ function draw(animate = -1, smooth = true) {
     if (c === last && (FULL() || !c.picked || c.i === STAGES.length - 1)) for (const n of c.nodes) {
       const hg = n.goals * c.k, w = c.i === STAGES.length - 1 ? W - c.x : 70;
       el('rect', { x: c.x, y: n.y, width: w, height: hg, fill: color(1), opacity: c.i === STAGES.length - 1 ? .85 : .35 }, gl);
-      el('rect', { x: c.x, y: n.y + hg, width: w, height: n.h - hg, fill: color(0), opacity: .35 }, gl);
+      // la phase suivante ne garde que les buts : rien après les ratés
+      if (!(STAGES[c.i + 1] || {}).goalsOnly) el('rect', { x: c.x, y: n.y + hg, width: w, height: n.h - hg, fill: color(0), opacity: .35 }, gl);
     }
     const placed = [];
     for (const n of c.nodes) {

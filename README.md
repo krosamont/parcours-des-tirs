@@ -106,3 +106,15 @@ ouverte. La fin recule pour montrer toute la fresque. Les durées se règlent da
 - **Version claire** (`site/clair/index.html` → `/projet/mbappe_tirs/clair/`) : le thème local, même fond beige, sans
   la grille (`site_theme_clair.css`).
 - Un bouton « Version claire » / « Version sombre » dans la barre de navigation passe de l'une à l'autre.
+
+## 6. Carrousel Instagram / TikTok : `render_collage.js`
+
+```bash
+node visuel_mbappe/render_collage.js   # -> collage/instagram_1..8.png (1080×1350) et collage/tiktok_1..8.png (1080×1920)
+```
+
+Visuel 1 : la fresque complète. Visuels 2 à 8 : une phase par image (zone, situation, surface, résultat, passeur,
+comment il a marqué, phase du but). Les images viennent du mode vidéo (`?video=1`), rendues en ×2 puis réduites,
+sans la grille. La version TikTok reprend la même image avec des bandes beiges en haut et en bas.
+
+« CPA* » = coup de pied arrêté (coup franc indirect, touche…) : la note est en bas des pages et des visuels.

@@ -71,12 +71,12 @@ const W = 2960, TOP = 490, H = 1000, GAP = 34, BAR = 10;
 const COLS = [260, 660, 1060, 1460, 1900, 2300, 2700];      // espace élargi avant le zoom sur les buts
 const STAGES = [
   { key: 'zone', title: 'ZONE', order: ['Surface de but', 'Surface · axe', 'Surface · gauche', 'Surface · droite', 'Point de penalty', 'Hors surface'] },
-  { key: 'sit',  title: 'SITUATION', order: ['Jeu placé', 'Contre-attaque', 'Penalty', 'Corner', 'Coup franc direct', 'Autre CPA', 'Action individuelle'] },
+  { key: 'sit',  title: 'SITUATION', order: ['Jeu placé', 'Contre-attaque', 'Penalty', 'Corner', 'Coup franc direct', 'Autre CPA*', 'Action individuelle'] },
   { key: 'body', title: 'SURFACE', order: ['Pied droit', 'Pied gauche', 'Tête'] },
   { key: 'res',  title: 'RÉSULTAT', order: ['But', 'Raté'] },
   { key: 'pass', title: 'PASSEUR', goalsOnly: true, order: null },
   { key: 'how',  title: 'COMMENT IL A MARQUÉ', goalsOnly: true, order: ['Pied droit', 'Pied gauche', 'Tête'] },
-  { key: 'phase', title: 'PHASE DU BUT', goalsOnly: true, order: ['Jeu placé', 'Contre-attaque', 'Penalty', 'Corner', 'Coup franc direct', 'Autre CPA', 'Action individuelle'] },
+  { key: 'phase', title: 'PHASE DU BUT', goalsOnly: true, order: ['Jeu placé', 'Contre-attaque', 'Penalty', 'Corner', 'Coup franc direct', 'Autre CPA*', 'Action individuelle'] },
 ];
 const SEASONS = [['all', 'Tout'], ['2024-2025', '2024-25'], ['2025-2026', '2025-26'], ['2026-2027', '2026-27']];
 const COMPS = [['all', 'Toutes'], ['laliga', 'Liga'], ['champions-league', 'Ligue des champions']];
@@ -285,7 +285,7 @@ function draw() {
     const tx = el('text', { x: j * 170 + 46, y: 1, 'font-size': 22, fill: '#3b3833' }, lg); tx.textContent = t;
   });
   const src = el('text', { x: W - 40, y: TOP + H + 135, 'text-anchor': 'end', 'font-size': 13, fill: 'var(--muted)' }, gt);
-  src.textContent = 'Données : WhoScored × FotMob · zones recalculées depuis x/y · passeur = joueur associé au tir';
+  src.textContent = '* CPA : coup de pied arrêté · Données : WhoScored × FotMob · zones recalculées depuis x/y · passeur = joueur associé au tir';
 }
 
 // demi-terrain (but en haut, gauche de l'attaquant à gauche) : rappelle d'où viennent les zones
