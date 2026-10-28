@@ -160,7 +160,7 @@ Avec `?render=1`, les boutons sont masqués pour l'export d'image.
 ```bash
 node src/render_collage.js <joueur>                   # fresque.png, vignette, carrousel d'images
 node src/render_collage_video.js <joueur> [--only 3]  # carrousel de petites vidéos (~4 min)
-node src/render_collage_video.js <joueur> --vertical  # vidéo verticale pour se filmer en dessous (~4 min)
+node src/render_collage_video.js <joueur> --vertical [--pause 4]  # vidéo verticale pour se filmer en dessous (~7 min)
 node src/render_video.js <joueur> [--to 5]            # vidéo complète + GIF
 ```
 
@@ -175,8 +175,9 @@ réduit, sans la grille.
   clip 1 (7,7 s) = la fresque complète, puis un zoom à gauche et un panoramique jusqu'à la dernière colonne ;
   clips 2 à 8 (4,5 s) = une phase par clip : l'état précédent reste 0,8 s, la colonne s'ouvre en 2,5 s (caméra qui
   la suit), puis 1,2 s de pause. Durées réglables dans `PHASE` et `ALL`. Choisir le ratio 4:5 dans Instagram.
-- **Vidéo verticale « face caméra »** (`sortie/<joueur>/video_vertical.mp4`, 1080×1920, 38 s) : les mêmes clips à
+- **Vidéo verticale « face caméra »** (`sortie/<joueur>/video_vertical.mp4`, 1080×1920, 60 s) : les mêmes clips à
   la suite (fresque complète, puis phase par phase) dans les 1120 px du haut, avec le titre, la photo et la légende.
+  Chiffres agrandis pour le téléphone ; chaque phase s'ouvre en 3 s puis reste 4 s à l'écran (`--pause 6` pour plus).
   Les 800 px du bas restent vides (couleur papier) pour y placer sa vidéo en train de parler, en incrustation dans
   CapCut, TikTok ou Instagram. Mise en page dans les règles `.split` de `templates/interactive.html` (`?video=1&split=1`).
 - **Vidéo complète** (22 s) : chaque phase s'ouvre en 1,5 s puis reste 1 s, la fin recule pour montrer toute la

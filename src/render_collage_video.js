@@ -3,7 +3,8 @@
 //   clips 2 à 8 : une phase par clip, la colonne suivante se déroule et la caméra la suit.
 // usage : node src/render_collage_video.js <joueur> [--only 3]   -> sortie/<joueur>/collage/video_1..8.mp4
 //         node src/render_collage_video.js <joueur> --vertical   -> sortie/<joueur>/video_vertical.mp4 (1080×1920) :
-//         les mêmes clips à la suite dans le haut de l'image (1120 px), le bas reste vide pour se filmer en train de parler
+//         les mêmes clips à la suite dans le haut de l'image (1120 px), le bas reste vide pour se filmer en train de parler ;
+//         chiffres agrandis, chaque phase s'ouvre en 3 s puis reste --pause secondes (4 par défaut)
 // Les images viennent du mode vidéo de sortie/<joueur>/interactive.html (?video=1, window.__frame(t)), rendues en ×2 puis réduites.
 const path = require('path'), fs = require('fs'), os = require('os'), { execFileSync } = require('child_process');
 const ROOT = path.resolve(__dirname, '..');
@@ -23,6 +24,8 @@ const ALL = { whole: 1.4, zoom: 1.3, pan: 4.2, hold: .8 };
   const page = await browser.newPage();
   page.on('pageerror', e => console.error('PAGE ERROR', e.message));
   const VERT = !!args.vertical, VH = VERT ? 1120 : 1350;
+  // vidéo verticale : on laisse plus de temps pour commenter chaque phase (--pause <s>, 4 s par défaut)
+  if (VERT) Object.assign(PHASE, { still: .6, rev: 3, hold: +(args.pause || 4) });
   await page.setViewport({ width: 1080, height: VH, deviceScaleFactor: 2 });
   await page.goto('file://' + path.join(DIR, 'interactive.html') + (VERT ? '?video=1&split=1' : '?video=1'), { waitUntil: 'networkidle0' });
   await page.waitForFunction(() => window.__ready === true);
@@ -35,10 +38,11 @@ const ALL = { whole: 1.4, zoom: 1.3, pan: 4.2, hold: .8 };
     window.__clip = (c, ct) => {
       if (c === 1) {
         window.__frame(window.__duration);              // fresque complète, toutes les phases ouvertes
-        const sf = VIEW_W / W, maxCam = W - VIEW_W / SC;
+        // vue d'ensemble : toute la fresque, marges comprises (CAM_L / CAM_R du gabarit)
+        const extra = -CAM_L + (CAM_R - (W - VIEW_W / SC)), sf = VIEW_W / (W + extra);
         const z = 1 - ease(cl((ct - ALL.whole) / ALL.zoom));
         const pan = ease(cl((ct - ALL.whole - ALL.zoom) / ALL.pan));
-        const sc = SC + (sf - SC) * z, cam = maxCam * pan * (1 - z), ty = (VIEW_H - HH * sc) / 2 * z;
+        const sc = SC + (sf - SC) * z, cam = (CAM_L + (CAM_R - CAM_L) * pan) * (1 - z) + CAM_L * z, ty = (VIEW_H - HH * sc) / 2 * z;
         svg.style.transform = `translate(${-cam * sc}px, ${ty}px) scale(${sc})`;
         document.getElementById('ph').textContent = 'Le parcours complet';
         return;

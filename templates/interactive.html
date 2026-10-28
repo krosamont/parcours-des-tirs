@@ -127,9 +127,14 @@ body.video.split { height: 1120px; }
 .split .sub { font-size: 18px; margin-top: 12px; max-width: 720px; }
 .split .photo { right: 52px; top: 34px; width: 172px; height: 172px; }
 .split .wrap { top: 214px; height: 840px; }
+.split #flow { overflow: visible; }   /* les étiquettes agrandies dépassent des bords de la fresque */
 .split .vfoot { left: 52px; right: 52px; bottom: 30px; font-size: 20px; }
 .split .vfoot .ph { font-size: 23px; }
 .split .vfoot .src { bottom: -20px; font-size: 12px; }
+/* étiquettes du Sankey agrandies, surtout les chiffres (la vidéo est regardée sur un téléphone) */
+.split .node-label .n { font-size: 31px; }
+.split .node-label .c { font-size: 27px; font-weight: 700; }
+.split .node-label .g, .split .node-label .m { font-size: 24px; font-weight: 700; }
 /*__THEME__*/
 </style>
 </head>
@@ -194,6 +199,7 @@ const HOVER = matchMedia('(hover: hover)').matches;
 const MOBILE = matchMedia('(max-width: 700px)');
 const VB0 = () => MOBILE.matches && !VIDEO ? -150 : 0;   // sur mobile les étiquettes de la 1re colonne débordent à gauche
 const VIDEO = new URLSearchParams(location.search).has('video');
+const BIG = VIDEO && new URLSearchParams(location.search).has('split');   // vidéo verticale : étiquettes agrandies
 let VP = null;   // mode vidéo : avancement (0..1) de la colonne en cours d'ouverture, imposé image par image
 
 function el(tag, attrs, parent) {
@@ -306,7 +312,7 @@ function label(parent, x, yc, anchor, lines) {
   const bg = el('rect', {}, g);
   let y = 0;
   lines.forEach(([cls, txt], i) => {
-    y += i === 0 ? 0 : (cls === 'c' ? 21 : 19) * (MOBILE.matches ? 1.5 : 1);
+    y += i === 0 ? 0 : BIG ? (cls === 'c' ? 33 : 31) : (cls === 'c' ? 21 : 19) * (MOBILE.matches ? 1.5 : 1);
     const t = el('text', { class: cls, x, y, 'text-anchor': anchor }, g); t.textContent = txt;
   });
   const bb = g.getBBox();
@@ -330,7 +336,8 @@ function nodeLines(c, n) {
   const lines = [['n', n.name], ['c', `${tot}  (${pct(tot, base)}${st.goalsOnly ? ' des buts' : ''})`]];
   if (st.key === 'res' && n.name === 'Raté') {
     const t = k => n.shots.filter(s => s.type === k).length;
-    lines.push(['m', `${t('Arrêté')} arrêtés · ${t('Hors cadre')} hors cadre · ${t('Poteau')} poteaux`]);
+    if (BIG) lines.push(['m', `${t('Arrêté')} arrêtés · ${t('Hors cadre')} hors cadre`], ['m', `${t('Poteau')} poteaux`]);
+    else lines.push(['m', `${t('Arrêté')} arrêtés · ${t('Hors cadre')} hors cadre · ${t('Poteau')} poteaux`]);
   } else if (st.key === 'res') {
     const xg = c.pool.reduce((a, s) => a + (s.xg || 0), 0);
     lines.push(['g', `xG cumulé ${xg.toFixed(1)} → ${tot - xg >= 0 ? '+' : ''}${(tot - xg).toFixed(1)} buts`]);
@@ -657,7 +664,9 @@ MOBILE.addEventListener('change', () => draw(-1, false));
 const TL = { intro: .5, rev: 1.5, hold: 1.0, zoom: 1.4, end: 2.6 };
 const phaseStart = k => TL.intro + k * (TL.rev + TL.hold);
 const SPLIT = qs.has('split'), VIEW_W = 1080, VIEW_H = SPLIT ? 840 : 900, SC = VIEW_H / HH;              // échelle de travail : ~3 colonnes à l'écran
-const camFor = d => Math.max(0, Math.min(W - VIEW_W / SC, COLS[d - 1] + 470 - VIEW_W / SC));
+// marges de caméra : avec les étiquettes agrandies (BIG), celles de la 1re et de la dernière colonne dépassent de la fresque
+const CAM_L = BIG ? -150 : 0, CAM_R = W - VIEW_W / SC + (BIG ? 220 : 0);
+const camFor = d => Math.max(CAM_L, Math.min(CAM_R, COLS[d - 1] + 470 - VIEW_W / SC));
 window.__duration = phaseStart(STAGES.length - 1) + TL.rev + TL.hold + TL.zoom + TL.end;
 window.__frame = t => {
   const ease = p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2, cl = v => Math.max(0, Math.min(1, v));
@@ -667,7 +676,7 @@ window.__frame = t => {
   state.depth = k + 1; state.focus = null; VP = p;
   draw(k, false);
   // caméra : suit la colonne qui s'ouvre, puis recule pour montrer toute la fresque
-  let cam = k === 0 ? 0 : camFor(k) + (camFor(k + 1) - camFor(k)) * ease(cl(p / .8)), sc = SC, ty = 0;
+  let cam = k === 0 ? CAM_L : camFor(k) + (camFor(k + 1) - camFor(k)) * ease(cl(p / .8)), sc = SC, ty = 0;
   const z = ease(cl((t - (phaseStart(STAGES.length - 1) + TL.rev + TL.hold)) / TL.zoom));
   if (z > 0) { const sf = VIEW_W / W; sc = SC + (sf - SC) * z; cam *= 1 - z; ty = (VIEW_H - HH * sc) / 2 * z; }
   svg.style.transform = `translate(${-cam * sc}px, ${ty}px) scale(${sc})`;
