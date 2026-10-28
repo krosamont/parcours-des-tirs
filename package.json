@@ -1,0 +1,14 @@
+{
+  "name": "parcours-des-tirs",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sankey « Shot Flow » des tirs d'un joueur de football : pages interactives, carrousels et vidéos",
+  "scripts": {
+    "collage": "node src/render_collage.js",
+    "clips": "node src/render_collage_video.js",
+    "video": "node src/render_video.js"
+  },
+  "dependencies": {
+    "puppeteer-core": "^23.11.1"
+  }
+}

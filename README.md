@@ -1,30 +1,55 @@
 # Le parcours des tirs d'un joueur (Sankey « Shot Flow »)
 
-Sankey « Shot Flow » des tirs d'un joueur, inspiré des visuels basket de graphsketball (captures `IMG_4104` à
-`IMG_4107`). Premier joueur : Kylian Mbappé au Real Madrid (`joueurs/mbappe/`).
+Sankey « Shot Flow » des tirs d'un joueur, inspiré des visuels basket de graphsketball (`docs/inspiration/`). Premier joueur : Kylian Mbappé au Real Madrid (`joueurs/mbappe/`).
 
 Parcours d'un tir : **zone → situation → surface → résultat**, puis pour les buts seulement
 **passeur → comment il a marqué → phase du but**. Bleu = but, rouge = raté (turquoise / corail sur le site).
 
+## Installation
+
+```bash
+pip install -r requirements.txt                 # pandas
+npm install                                      # puppeteer-core (rendus d'images et de vidéos)
+npx @puppeteer/browsers install chrome@stable    # si aucun Chrome n'est installé (ou CHROME=/chemin/vers/chrome)
+```
+
+ffmpeg doit être dans le PATH (`brew install ffmpeg`).
+
+## Organisation
+
+```
+faire_joueur.sh          tout produire pour un joueur (pages, images, clips, vidéo)
+deploy.sh                publier un joueur sur data-workers.com
+joueurs/<joueur>/        une fiche par joueur : joueur.json, photo.png, export.csv, requete.sql
+sql/                     gabarit de la requête MotherDuck
+src/                     build_fresque.py (données -> pages) et les scripts de rendu (render_*.js)
+templates/               gabarits HTML : fresque.html (statique) et interactive.html (clic, mode vidéo)
+themes/                  thèmes du site : site_sombre.css, site_clair.css
+site/                    copie locale de la page /projet/ du site, où s'ajoutent les cartes
+docs/inspiration/        les visuels basket de graphsketball qui ont servi de modèle
+sortie/<joueur>/         tout ce qui est généré (non versionné)
+```
+
 ## Ajouter un joueur
 
 ```bash
-# 1. sa fiche (photo : assets/players/<id FotMob>.png)
-mkdir visuel_mbappe/joueurs/haaland
-cat > visuel_mbappe/joueurs/haaland/joueur.json <<'EOF'
-{ "nom": "Erling Haaland", "equipe": "Manchester City", "photo": "assets/players/<id FotMob>.png" }
+# 1. sa fiche et sa photo (PNG carré, par exemple celle de FotMob)
+mkdir joueurs/haaland
+cat > joueurs/haaland/joueur.json <<'EOF'
+{ "nom": "Erling Haaland", "equipe": "Manchester City" }
 EOF
+cp ~/Downloads/haaland.png joueurs/haaland/photo.png
 
 # 2. ses tirs : la requête prête à lancer sur MotherDuck, puis exporter le résultat en CSV
-python3 visuel_mbappe/build_fresque.py haaland --sql      # -> joueurs/haaland/requete.sql
-#    résultat MotherDuck -> visuel_mbappe/joueurs/haaland/export.csv
+python3 src/build_fresque.py haaland --sql      # -> joueurs/haaland/requete.sql
+#    résultat MotherDuck -> joueurs/haaland/export.csv
 
 # 3. tout produire : pages, fresque, vignette, carrousels d'images et de vidéos, vidéo complète + GIF (~6 min)
-./visuel_mbappe/faire_joueur.sh haaland                   # --rapide : sans les vidéos
+./faire_joueur.sh haaland                   # --rapide : sans les vidéos
 
 # 4. publier sur data-workers.com (/projet/<slug>/ et /clair/), avec sa carte sur /projet/
-python3 visuel_mbappe/build_fresque.py haaland --carte    # ajoute la carte dans site/projet_index.html
-./visuel_mbappe/deploy.sh haaland --index
+python3 src/build_fresque.py haaland --carte    # ajoute la carte dans site/projet_index.html
+./deploy.sh haaland --index
 ```
 
 ### `joueur.json`
@@ -33,43 +58,43 @@ python3 visuel_mbappe/build_fresque.py haaland --carte    # ajoute la carte dans
 |---|---|---|
 | `nom` | oui | nom affiché (titre, partage, carte du site) |
 | `equipe` | oui | `teamName` dans `foot.bronze.events` (filtre de la requête, sous-titre) |
-| `photo` | oui | chemin depuis la racine du dépôt, en général `assets/players/<id FotMob>.png` |
+| `photo` | non | photo du joueur dans son dossier ; par défaut `photo.png` |
 | `nom_events` | non | nom dans `foot.bronze.events` s'il diffère de `nom` |
 | `nom_court` | non | pour la carte et le partage (« Mbappé, le parcours de ses tirs ») ; par défaut le dernier mot de `nom` |
 | `slug` | non | adresse sur le site, `/projet/<slug>/` ; par défaut `<joueur>_tirs` |
 | `noms_courts` | non | noms des passeurs à raccourcir (`"Vinícius Júnior": "Vinícius"`) ; par défaut leur dernier mot |
 
-Le reste se déduit de l'export : saisons, compétitions (libellés dans `COMPETITIONS` de `build_fresque.py`, à
+Le reste se déduit de l'export : saisons, compétitions (libellés dans `COMPETITIONS` de `src/build_fresque.py`, à
 compléter pour une nouvelle compétition), adversaires, nombre de tirs et de buts.
 
 ## Chaîne complète
 
 ```
 MotherDuck (foot.bronze.events + match_status)
-   │  requete_motherduck.sql (gabarit {{joueur}} / {{equipe}})  ->  joueurs/<joueur>/requete.sql
+   │  sql/requete_motherduck.sql (gabarit {{joueur}} / {{equipe}})  ->  joueurs/<joueur>/requete.sql
    ▼
-joueurs/<joueur>/export.csv + joueur.json
-   │  python3 build_fresque.py <joueur>
+joueurs/<joueur>/export.csv + joueur.json + photo.png
+   │  python3 src/build_fresque.py <joueur>
    ▼
 sortie/<joueur>/fresque.html           fresque complète (statique)
 sortie/<joueur>/interactive.html       déroulé phase par phase au clic, mode vidéo ?video=1
 sortie/<joueur>/site/index.html        version du site (sombre), et site/clair/index.html
-   │  node render_collage.js <joueur>
+   │  node src/render_collage.js <joueur>
    ▼
 sortie/<joueur>/fresque.png            fresque entière 2960×1660
 sortie/<joueur>/site/<slug>.jpg        vignette 1280×720 de la carte /projet/
 sortie/<joueur>/collage/instagram_1..8.png (1080×1440) et tiktok_1..8.png (1080×1920)
-   │  node render_collage_video.js <joueur>
+   │  node src/render_collage_video.js <joueur>
    ▼
 sortie/<joueur>/collage/video_1..8.mp4 carrousel de petites vidéos Instagram (1080×1350)
-   │  node render_video.js <joueur>
+   │  node src/render_video.js <joueur>
    ▼
 sortie/<joueur>/video.mp4 / video.gif  vidéo complète 1080×1350 (22 s) et GIF 600 px
 ```
 
 `sortie/` n'est pas versionné : tout se régénère avec `faire_joueur.sh <joueur>`.
 
-## 1. Données : `requete_motherduck.sql`
+## 1. Données : `sql/requete_motherduck.sql`
 
 Gabarit de la requête MotherDuck ; `build_fresque.py <joueur> --sql` le remplit dans `joueurs/<joueur>/requete.sql`.
 
@@ -89,7 +114,7 @@ Points d'attention :
 - `relatedPlayerId` est renseigné pour les buts **et** les tirs ratés (385 tirs sur 478 pour Mbappé) : c'est le
   joueur associé à la dernière passe. Les visuels ne l'utilisent que pour les buts (colonne Passeur).
 
-## 2. Préparation : `build_fresque.py <joueur>`
+## 2. Préparation : `src/build_fresque.py <joueur>`
 
 Lit `joueurs/<joueur>/export.csv`, prépare les champs utiles et écrit les pages autonomes (données et photo
 intégrées, elles s'ouvrent sans serveur).
@@ -107,7 +132,7 @@ intégrées, elles s'ouvrent sans serveur).
 
 « CPA* » = coup de pied arrêté (coup franc indirect, touche…) : la note est en bas des pages et des visuels.
 
-Gabarits : `fresque_template.html` (fresque statique) et `interactive_template.html` (page interactive et mode
+Gabarits : `templates/fresque.html` (fresque statique) et `templates/interactive.html` (page interactive et mode
 vidéo). Ils ne contiennent rien de propre à un joueur : `__NOM__`, `__NOM_COURT__`, `__PHOTO__`, les tirs et `META`
 (nom, équipe, saisons, compétitions) sont injectés par le script.
 
@@ -132,12 +157,11 @@ Avec `?render=1`, les boutons sont masqués pour l'export d'image.
 ## 4. Visuels pour les réseaux
 
 ```bash
-node visuel_mbappe/render_collage.js <joueur>                   # fresque.png, vignette, carrousel d'images
-node visuel_mbappe/render_collage_video.js <joueur> [--only 3]  # carrousel de petites vidéos (~4 min)
-node visuel_mbappe/render_video.js <joueur> [--to 5]            # vidéo complète + GIF
+node src/render_collage.js <joueur>                   # fresque.png, vignette, carrousel d'images
+node src/render_collage_video.js <joueur> [--only 3]  # carrousel de petites vidéos (~4 min)
+node src/render_video.js <joueur> [--to 5]            # vidéo complète + GIF
 ```
 
-Une fois pour toutes : `npm install --prefix tools` (puppeteer-core).
 
 Tout vient du mode vidéo de `interactive.html` (`?video=1`), qui expose `window.__frame(t)` : chaque image est
 dessinée pour un instant `t` précis, sans dépendre de l'horloge, donc l'animation reste fluide. Rendu en ×2 puis
@@ -150,18 +174,18 @@ réduit, sans la grille.
   clips 2 à 8 (4,5 s) = une phase par clip : l'état précédent reste 0,8 s, la colonne s'ouvre en 2,5 s (caméra qui
   la suit), puis 1,2 s de pause. Durées réglables dans `PHASE` et `ALL`. Choisir le ratio 4:5 dans Instagram.
 - **Vidéo complète** (22 s) : chaque phase s'ouvre en 1,5 s puis reste 1 s, la fin recule pour montrer toute la
-  fresque. Durées dans `TL`, dans `interactive_template.html`.
+  fresque. Durées dans `TL`, dans `templates/interactive.html`.
 
 ## 5. Publication sur data-workers.com : `deploy.sh <joueur>`
 
 ```bash
-./visuel_mbappe/deploy.sh mbappe            # régénère et publie les deux versions + la vignette
-./visuel_mbappe/deploy.sh mbappe --index    # publie aussi la page /projet/ (site/projet_index.html)
+./deploy.sh mbappe            # régénère et publie les deux versions + la vignette
+./deploy.sh mbappe --index    # publie aussi la page /projet/ (site/projet_index.html)
 ```
 
-- **Version sombre** (`sortie/<joueur>/site/index.html` → `/projet/<slug>/`) : couleurs du site (`site_theme.css`).
+- **Version sombre** (`sortie/<joueur>/site/index.html` → `/projet/<slug>/`) : couleurs du site (`themes/site_sombre.css`).
 - **Version claire** (`sortie/<joueur>/site/clair/index.html` → `/projet/<slug>/clair/`) : le thème local, même fond
-  beige, sans la grille (`site_theme_clair.css`). Un bouton dans la barre de navigation passe de l'une à l'autre.
-- **Carte sur /projet/** : `build_fresque.py <joueur> --carte` l'ajoute dans `site/projet_index.html` (copie locale
+  beige, sans la grille (`themes/site_clair.css`). Un bouton dans la barre de navigation passe de l'une à l'autre.
+- **Carte sur /projet/** : `src/build_fresque.py <joueur> --carte` l'ajoute dans `site/projet_index.html` (copie locale
   de la page, partagée par tous les projets), après la dernière carte « parcours de ses tirs ». Relire le texte avant
   `--index`. Le serveur garde une sauvegarde `index.html.bak-<date>` à chaque publication.

@@ -1,8 +1,8 @@
 """Fresque « Shot Flow » des tirs d'un joueur (inspirée des Shot Flow basket de graphsketball).
 
-usage: python3 visuel_mbappe/build_fresque.py <joueur> [--carte] [--sql]
-  <joueur>  dossier joueurs/<joueur>/ : joueur.json (nom, équipe, photo, slug du site) + export.csv (requête MotherDuck)
-  --sql     écrit seulement joueurs/<joueur>/requete.sql (requete_motherduck.sql remplie pour ce joueur) et s'arrête
+usage: python3 src/build_fresque.py <joueur> [--carte] [--sql]
+  <joueur>  dossier joueurs/<joueur>/ : joueur.json (nom, équipe, slug du site) + photo.png + export.csv (requête MotherDuck)
+  --sql     écrit seulement joueurs/<joueur>/requete.sql (sql/requete_motherduck.sql remplie pour ce joueur) et s'arrête
   --carte   ajoute aussi la carte du joueur dans site/projet_index.html (page /projet/ de data-workers.com)
 
 écrit dans sortie/<joueur>/ :
@@ -18,8 +18,7 @@ from pathlib import Path
 
 import pandas as pd
 
-HERE = Path(__file__).resolve().parent
-ROOT = HERE.parent
+ROOT = Path(__file__).resolve().parent.parent      # racine du projet
 
 # x en [0,105] vers le but adverse, y en [0,68] avec y haut = côté gauche de l'attaquant (coordonnées WhoScored x1.05 / x0.68)
 BOX_X, SIX_X = 83 * 1.05, 94.2 * 1.05             # 87.15 m, 98.9 m
@@ -49,7 +48,7 @@ def zone(r):
 
 
 def load(pid):
-    folder = HERE / 'joueurs' / pid
+    folder = ROOT / 'joueurs' / pid
     if not (folder / 'joueur.json').exists():
         raise SystemExit(f'joueurs/{pid}/joueur.json introuvable (voir joueurs/mbappe/ pour un exemple)')
     cfg = json.loads((folder / 'joueur.json').read_text())
@@ -57,12 +56,12 @@ def load(pid):
     cfg.setdefault('nom_events', cfg['nom'])
     cfg.setdefault('slug', re.sub(r'[^a-z0-9]+', '_', pid.lower()) + '_tirs')
     cfg.setdefault('noms_courts', {})
-    cfg['id'], cfg['dir'], cfg['out'] = pid, folder, HERE / 'sortie' / pid
+    cfg['id'], cfg['dir'], cfg['out'] = pid, folder, ROOT / 'sortie' / pid
     return cfg
 
 
 def write_sql(cfg):
-    q = (HERE / 'requete_motherduck.sql').read_text()
+    q = (ROOT / 'sql' / 'requete_motherduck.sql').read_text()
     q = q.replace('{{joueur}}', cfg['nom_events'].replace("'", "''")).replace('{{equipe}}', cfg['equipe'].replace("'", "''"))
     (cfg['dir'] / 'requete.sql').write_text(q)
     print(f"joueurs/{cfg['id']}/requete.sql : à lancer sur MotherDuck, puis exporter le résultat dans joueurs/{cfg['id']}/export.csv")
@@ -109,7 +108,7 @@ def site_replacements(cfg, shots, clair=False):
     rep = {
         f'<title>Parcours des tirs {court}</title>': f'<title>{nom}, le parcours de ses tirs · Data Workers</title>',
         '<!--__HEAD__-->': head if clair else head + '\n<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">',
-        '/*__THEME__*/': (HERE / ('site_theme_clair.css' if clair else 'site_theme.css')).read_text(),
+        '/*__THEME__*/': (ROOT / 'themes' / ('site_clair.css' if clair else 'site_sombre.css')).read_text(),
         '<!--__NAV__-->': f'<nav class="sitenav"><img src="/assets/images/logo.png" alt=""><a href="https://data-workers.com/">Data Workers</a><span>/</span><a href="/projet/">Projets</a>{switch}</nav>',
         '<!--__FOOT__-->': '<footer class="sitefoot"><a href="https://data-workers.com/">data-workers.com</a> · Kevin Rosamont Prombo · Données WhoScored × FotMob</footer>',
     }
@@ -120,7 +119,7 @@ def site_replacements(cfg, shots, clair=False):
 
 def add_card(cfg, shots):
     """Ajoute la carte du joueur dans site/projet_index.html (copie locale de /projet/), juste après la dernière carte Sankey."""
-    p = HERE / 'site' / 'projet_index.html'
+    p = ROOT / 'site' / 'projet_index.html'
     page = p.read_text()
     href = f"/projet/{cfg['slug']}/"
     if f'href="{href}"' in page:
@@ -161,15 +160,15 @@ def main():
         raise SystemExit(f"joueurs/{cfg['id']}/export.csv manquant")
     shots = shots_of(cfg)
     meta = meta_of(cfg, shots)
-    photo = 'data:image/png;base64,' + base64.b64encode((ROOT / cfg['photo']).read_bytes()).decode()
+    photo = 'data:image/png;base64,' + base64.b64encode((cfg['dir'] / cfg.get('photo', 'photo.png')).read_bytes()).decode()
     g = sum(s['goal'] for s in shots)
     data = {'/*__SHOTS__*/[]': json.dumps(shots, ensure_ascii=False), '__PHOTO__': photo,
             "/*__META__*/{ nom: 'Joueur', equipe: 'Équipe', seasons: [], comps: [] }": json.dumps(meta, ensure_ascii=False)}
-    for tpl, name, site in (('fresque_template.html', 'fresque.html', None),
-                            ('interactive_template.html', 'interactive.html', None),
-                            ('interactive_template.html', 'site/index.html', site_replacements(cfg, shots)),
-                            ('interactive_template.html', 'site/clair/index.html', site_replacements(cfg, shots, clair=True))):
-        page = (HERE / tpl).read_text()
+    for tpl, name, site in (('fresque.html', 'fresque.html', None),
+                            ('interactive.html', 'interactive.html', None),
+                            ('interactive.html', 'site/index.html', site_replacements(cfg, shots)),
+                            ('interactive.html', 'site/clair/index.html', site_replacements(cfg, shots, clair=True))):
+        page = (ROOT / 'templates' / tpl).read_text()
         page = page.replace('__NOM_COURT__', html.escape(cfg['nom_court'])).replace('__NOM__', html.escape(cfg['nom']))
         for key, value in {**(site or {}), **data}.items():
             page = page.replace(key, value)

@@ -1,6 +1,9 @@
 .DS_Store
-# tout ce qui est généré : python3 build_fresque.py <joueur> puis les scripts de rendu (faire_joueur.sh)
+node_modules/
+__pycache__/
+# tout ce qui est généré : ./faire_joueur.sh <joueur>
 sortie/
+# vidéos et captures de référence (lourdes, gardées en local)
 *.mp4
 *.MP4
 *.gif

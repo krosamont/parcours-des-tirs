@@ -1,12 +1,12 @@
 // Carrousel Instagram de petites vidéos (1080×1350, 30 i/s), comme les posts « Shot Flow » de graphsketball :
 //   clip 1 : la fresque complète, puis un zoom et un panoramique de gauche à droite ;
 //   clips 2 à 8 : une phase par clip, la colonne suivante se déroule et la caméra la suit.
-// usage : node visuel_mbappe/render_collage_video.js <joueur> [--only 3]   -> sortie/<joueur>/collage/video_1..8.mp4
+// usage : node src/render_collage_video.js <joueur> [--only 3]   -> sortie/<joueur>/collage/video_1..8.mp4
 // Les images viennent du mode vidéo de sortie/<joueur>/interactive.html (?video=1, window.__frame(t)), rendues en ×2 puis réduites.
 const path = require('path'), fs = require('fs'), os = require('os'), { execFileSync } = require('child_process');
 const ROOT = path.resolve(__dirname, '..');
-const puppeteer = require(path.join(ROOT, 'tools/node_modules/puppeteer-core'));
-const { launchOptions } = require(path.join(ROOT, 'tools/browser'));
+const puppeteer = require('puppeteer-core');
+const { launchOptions } = require('./browser');
 const { out: DIR, args } = require('./joueur')();
 const FPS = 30, OUT = path.join(DIR, 'collage');
 
@@ -61,7 +61,7 @@ const ALL = { whole: 1.4, zoom: 1.3, pan: 4.2, hold: .8 };
       '-vf', 'scale=1080:1350:flags=lanczos', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', '-preset', 'slow',
       '-movflags', '+faststart', out]);
     fs.rmSync(dir, { recursive: true, force: true });
-    console.log(`${path.relative(__dirname, out)} : ${len.toFixed(1)} s`);
+    console.log(`${path.relative(ROOT, out)} : ${len.toFixed(1)} s`);
   }
   await browser.close();
 })();

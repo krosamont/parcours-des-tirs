@@ -1,6 +1,6 @@
--- Tirs d'un joueur : requête MotherDuck qui produit visuel_mbappe/joueurs/<joueur>/export.csv
+-- Tirs d'un joueur : requête MotherDuck qui produit joueurs/<joueur>/export.csv
 -- Gabarit : Kylian Mbappé (nom dans foot.bronze.events) et Real Madrid (teamName) sont remplis depuis joueurs/<joueur>/joueur.json
---   python3 visuel_mbappe/build_fresque.py <joueur> --sql   -> joueurs/<joueur>/requete.sql, prête à lancer
+--   python3 src/build_fresque.py <joueur> --sql   -> joueurs/<joueur>/requete.sql, prête à lancer
 -- Source : foot.bronze.events (événements WhoScored, enrichis FotMob) + foot.bronze.match_status
 -- Une ligne = un tir. Export : résultat de la requête -> CSV -> joueurs/<joueur>/export.csv
 

@@ -1,13 +1,13 @@
 // Vidéo « parcours des tirs » (1080×1350, 30 i/s) : chaque phase du Sankey s'ouvre l'une après l'autre.
-// usage : node visuel_mbappe/render_video.js <joueur> [--fps 30] [--to 5] [--out chemin.mp4] [--gif-width 600]
+// usage : node src/render_video.js <joueur> [--fps 30] [--to 5] [--out chemin.mp4] [--gif-width 600]
 //         -> sortie/<joueur>/video.mp4 + video.gif
 // sort le MP4 et, à côté, le même parcours en GIF (15 i/s, 600 px de large, en boucle) pour les réseaux.
 // La page sortie/<joueur>/interactive.html?video=1 expose window.__frame(t) : chaque image est dessinée pour un instant t
 // précis (pas d'horloge réelle), donc l'animation reste fluide quelle que soit la vitesse de capture.
 const path = require('path'), fs = require('fs'), os = require('os'), { execFileSync } = require('child_process');
 const ROOT = path.resolve(__dirname, '..');
-const puppeteer = require(path.join(ROOT, 'tools/node_modules/puppeteer-core'));
-const { launchOptions } = require(path.join(ROOT, 'tools/browser'));
+const puppeteer = require('puppeteer-core');
+const { launchOptions } = require('./browser');
 const { out: DIR, args } = require('./joueur')();
 const FPS = +(args.fps || 30), OUT = args.out ? path.resolve(args.out) : path.join(DIR, 'video.mp4');
 
