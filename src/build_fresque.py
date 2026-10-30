@@ -82,11 +82,12 @@ def normalise(d):
     d['shot_type'] = d.shot_type.where(d.shot_type.notna(), d.is_header.map({True: 'Header'})).fillna('Foot')
     # passeur : le joueur de la passe qui précède le tir (pas un rebond sur un autre tir)
     d['shot_related_player_name'] = d.related_player_name.where(d.related_event_type == 'Pass')
-    # penalties : le joueur qui a obtenu le penalty compte comme passeur (« Lui-même » s'il l'a obtenu lui-même)
+    # penalties : le joueur qui a obtenu le penalty compte comme passeur (« Sans passeur » s'il l'a obtenu lui-même)
     if 'penalty_won_by_player_name' in d.columns:
         won = d.penalty_won_by_player_name.where(d.is_penalty == True)
-        won = won.where(won != d.player_name, 'Lui-même')
-        d['shot_related_player_name'] = won.where(won.notna(), d.shot_related_player_name)
+        own = won == d.player_name
+        won = won.where(~own)
+        d['shot_related_player_name'] = won.where(won.notna(), d.shot_related_player_name).where(~own)
     teams = d.fixture.str.split(' - ', n=1, expand=True)
     d['ws_home_name'], d['ws_away_name'] = teams[0], teams[1]
     return d.rename(columns={'team_name': 'teamName', 'match_date': 'fm_utcTime'}).assign(FirstTouch=False)

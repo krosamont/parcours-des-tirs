@@ -337,8 +337,8 @@ function passDefs(shots) {
   const out = [];
   const penWon = goals.filter(s => s.sit === 'Penalty' && s.ast);
   const pens = n => n > 1 ? `${n} penalties` : `${n} penalty`;
-  if (solo.length) out.push(['Sans passeur', `${plural(solo.length, 'but')} sans passe décisive d'un coéquipier${pen ? ` : ${pens(pen)} sans joueur à l'origine` : ''}, le reste sur une reprise, un ballon récupéré ou une action seul.`]);
-  if (penWon.length) out.push(['Penalties', `le joueur qui a obtenu le penalty compte comme passeur (${pens(penWon.length)} marqués) ; « Lui-même » : penalty obtenu par ${META.nom}.`]);
+  if (solo.length) out.push(['Sans passeur', `${plural(solo.length, 'but')} sans passe décisive d'un coéquipier${pen ? ` : ${pens(pen)} obtenus par ${META.nom} lui-même ou sans joueur à l'origine` : ''}, le reste sur une reprise, un ballon récupéré ou une action seul.`]);
+  if (penWon.length) out.push(['Penalties', `le joueur qui a obtenu le penalty compte comme passeur (${pens(penWon.length)} marqués).`]);
   if (others.length) out.push(['Autres', `les passeurs hors des 7 premiers : ${names.size} joueurs, ${plural(others.length, 'but')} au total.`]);
   return out;
 }
@@ -354,7 +354,7 @@ function defs(parent, shots, y) {
 function story(parent, st, shots, N, G, y) {
   const pool = st.goalsOnly ? shots.filter(s => s.goal) : shots, by = {};
   pool.forEach(s => { const k = s[st.key]; by[k] = by[k] || { n: 0, g: 0, xg: 0 }; by[k].n++; by[k].g += s.goal; by[k].xg += s.xg || 0; });
-  const known = Object.entries(by).filter(([k]) => !/Non renseign|non précisé|Autres|Sans passeur|Lui-même/.test(k));
+  const known = Object.entries(by).filter(([k]) => !/Non renseign|non précisé|Autres|Sans passeur/.test(k));
   const top = key => known.slice().sort((a, b) => b[1][key] - a[1][key])[0] || ['–', { n: 0, g: 0 }];
   const low = t => t.charAt(0).toLowerCase() + t.slice(1);
   let parts;   // [texte, gras ?] ; '\n' = retour à la ligne
