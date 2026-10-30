@@ -313,6 +313,8 @@ function draw() {
   });
   const src = el('text', { x: W - 40, y: TOP + H + 200, 'text-anchor': 'end', 'font-size': 13, fill: 'var(--muted)' }, gt);
   src.textContent = '* CPA : coup de pied arrêté · Données : WhoScored × FotMob · zones recalculées depuis x/y · passeur = joueur associé au tir';
+  // lexique de la colonne des passeurs : ce que veulent dire « Sans passeur » et « Autres »
+  if (STAGES.some(st => st.key === 'pass')) defs(gt, shots, TOP + H + 196);
   if (META.note) {
     const nt = el('text', { x: W - 40, y: TOP + H + 220, 'text-anchor': 'end', 'font-size': 13, fill: 'var(--muted)' }, gt);
     nt.textContent = META.note;
@@ -323,6 +325,22 @@ function draw() {
 function xgGap(shots) {
   const w = shots.filter(s => s.xg != null), xg = w.reduce((a, s) => a + s.xg, 0), g = w.filter(s => s.goal).length;
   return { xg, d: g - xg, partial: w.length < shots.length, n: w.length };
+}
+
+function passDefs(shots) {
+  const goals = shots.filter(s => s.goal), solo = goals.filter(s => s.pass === 'Sans passeur'), pen = solo.filter(s => s.sit === 'Penalty').length;
+  const others = goals.filter(s => s.pass === 'Autres'), names = new Set(others.map(s => s.ast));
+  const out = [];
+  if (solo.length) out.push(['Sans passeur', `${plural(solo.length, 'but')} sans passe décisive d'un coéquipier : ${plural(pen, 'penalty')}, le reste sur une reprise, un ballon récupéré ou une action seul.`.replace('1 penaltys', '1 penalty').replace('penaltys', 'penalties')]);
+  if (others.length) out.push(['Autres', `les passeurs hors des 7 premiers : ${names.size} joueurs, ${plural(others.length, 'but')} au total.`]);
+  return out;
+}
+function defs(parent, shots, y) {
+  passDefs(shots).forEach(([k, txt], i) => {
+    const t = el('text', { x: 40, y: y + i * 22, 'font-size': 15, fill: '#3b3833' }, parent);
+    const a = el('tspan', { 'font-weight': 700 }, t); a.textContent = `« ${k} » : `;
+    const b = el('tspan', {}, t); b.textContent = txt;
+  });
 }
 
 // le récit sous chaque colonne : une phrase calculée sur la sélection, avec le chiffre clé en gras
