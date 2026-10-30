@@ -1,7 +1,7 @@
 // Carrousel Instagram de petites vidéos (1080×1350, 30 i/s), comme les posts « Shot Flow » de graphsketball :
 //   clip 1 : la fresque complète, puis un zoom et un panoramique de gauche à droite ;
-//   clips 2 à 8 : une phase par clip, la colonne suivante se déroule et la caméra la suit.
-// usage : node src/render_collage_video.js <joueur> [--only 3]   -> sortie/<joueur>/collage/video_1..8.mp4
+//   clips 2 à N+1 : une phase par clip (N = nombre d'étapes du joueur), la colonne suivante se déroule et la caméra la suit.
+// usage : node src/render_collage_video.js <joueur> [--only 3]   -> sortie/<joueur>/collage/video_*.mp4 (fresque complète + un clip par phase)
 //         node src/render_collage_video.js <joueur> --vertical   -> sortie/<joueur>/video_vertical.mp4 (1080×1920) :
 //         les mêmes clips à la suite dans le haut de l'image (1120 px), le bas reste vide pour se filmer en train de parler ;
 //         chiffres agrandis, chaque phase s'ouvre en 3 s puis reste --pause secondes (4 par défaut)
@@ -55,7 +55,8 @@ const ALL = { whole: 1.4, zoom: 1.3, pan: 4.2, hold: .8 };
     };
   }, PHASE, ALL);
 
-  const clips = args.only ? [+args.only] : [1, 2, 3, 4, 5, 6, 7, 8];
+  const nStages = await page.evaluate(() => STAGES.length);   // clip 1 = la fresque entière, puis un clip par phase
+  const clips = args.only ? [+args.only] : Array.from({ length: nStages + 1 }, (_, i) => i + 1);
   if (VERT) {
     // une seule vidéo : tous les clips à la suite, puis le bas complété par une zone vide couleur papier
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'shotflow-vertical-'));

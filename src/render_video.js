@@ -1,7 +1,6 @@
 // Vidéo « parcours des tirs » (1080×1350, 30 i/s) : chaque phase du Sankey s'ouvre l'une après l'autre.
-// usage : node src/render_video.js <joueur> [--fps 30] [--to 5] [--out chemin.mp4] [--gif-width 600]
-//         -> sortie/<joueur>/video.mp4 + video.gif
-// sort le MP4 et, à côté, le même parcours en GIF (15 i/s, 600 px de large, en boucle) pour les réseaux.
+// usage : node src/render_video.js <joueur> [--fps 30] [--to 5] [--out chemin.mp4] [--gif] [--gif-width 600]
+//         -> sortie/<joueur>/video.mp4 (+ video.gif avec --gif : 15 i/s, 600 px de large, en boucle)
 // La page sortie/<joueur>/interactive.html?video=1 expose window.__frame(t) : chaque image est dessinée pour un instant t
 // précis (pas d'horloge réelle), donc l'animation reste fluide quelle que soit la vitesse de capture.
 const path = require('path'), fs = require('fs'), os = require('os'), { execFileSync } = require('child_process');
@@ -30,9 +29,11 @@ const FPS = +(args.fps || 30), OUT = args.out ? path.resolve(args.out) : path.jo
   execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', path.join(dir, 'f%05d.png'),
     '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', '-preset', 'slow', '-movflags', '+faststart', OUT]);
   fs.rmSync(dir, { recursive: true, force: true });
+  console.log(`\n${path.relative(ROOT, OUT)} : ${duration.toFixed(1)} s, ${n} images`);
+  if (!args.gif) return;   // le GIF seulement sur demande
   const GIF = OUT.replace(/\.mp4$/, '.gif'), gw = +(args['gif-width'] || 600);
   execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', OUT, '-vf',
     `fps=15,scale=${gw}:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle`,
     '-loop', '0', GIF]);
-  console.log(`\n${path.relative(ROOT, OUT)} + ${path.basename(GIF)} : ${duration.toFixed(1)} s, ${n} images`);
+  console.log(`${path.relative(ROOT, GIF)}`);
 })();

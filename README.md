@@ -18,7 +18,7 @@ ffmpeg doit être dans le PATH (`brew install ffmpeg`).
 ## Organisation
 
 ```
-faire_joueur.sh          tout produire pour un joueur (pages, images, clips, vidéo)
+faire_joueur.sh          produire un joueur : pages + fresque (--reseaux : carrousels, clips, vidéos ; --gif : GIF)
 deploy.sh                publier un joueur sur data-workers.com
 joueurs/<joueur>/        une fiche par joueur : joueur.json, photo.png, export.csv, requete.sql
 sql/                     gabarit de la requête MotherDuck
@@ -44,8 +44,8 @@ cp ~/Downloads/haaland.png joueurs/haaland/photo.png
 python3 src/build_fresque.py haaland --sql      # -> joueurs/haaland/requete.sql
 #    résultat MotherDuck -> joueurs/haaland/export.csv
 
-# 3. tout produire : pages, fresque, vignette, carrousels d'images et de vidéos, vidéo complète + GIF (~6 min)
-./faire_joueur.sh haaland                   # --rapide : sans les vidéos
+# 3. les pages et la fresque (quelques secondes) ; --reseaux : en plus vignette, carrousels, clips et vidéos (~15 min) ; --gif : en plus le GIF
+./faire_joueur.sh haaland
 
 # 4. publier sur data-workers.com (/projet/<slug>/ et /clair/), avec sa carte sur /projet/
 python3 src/build_fresque.py haaland --carte    # ajoute la carte dans site/projet_index.html
@@ -112,7 +112,7 @@ sortie/<joueur>/video.mp4 / video.gif  vidéo complète 1080×1350 (22 s) et GIF
 sortie/<joueur>/video_vertical.mp4     vidéo verticale 1080×1920, bas libre pour se filmer (render_collage_video.js --vertical)
 ```
 
-`sortie/` n'est pas versionné : tout se régénère avec `faire_joueur.sh <joueur>`.
+`sortie/` n'est pas versionné : tout se régénère avec `faire_joueur.sh <joueur> [--reseaux]`.
 
 ## 1. Données : `sql/requete_motherduck.sql`
 
@@ -180,7 +180,7 @@ Avec `?render=1`, les boutons sont masqués pour l'export d'image.
 node src/render_collage.js <joueur> [--fresque]       # fresque.png, vignette, carrousel d'images (--fresque : fresque seule)
 node src/render_collage_video.js <joueur> [--only 3]  # carrousel de petites vidéos (~4 min)
 node src/render_collage_video.js <joueur> --vertical [--pause 4]  # vidéo verticale pour se filmer en dessous (~7 min)
-node src/render_video.js <joueur> [--to 5]            # vidéo complète + GIF
+node src/render_video.js <joueur> [--to 5] [--gif]    # vidéo complète (+ GIF avec --gif)
 ```
 
 

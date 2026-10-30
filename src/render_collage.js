@@ -1,5 +1,5 @@
 // Carrousel Instagram (1080×1440, format 3:4 des publications) et TikTok (1080×1920) : la fresque complète, puis une image par phase.
-//   node src/render_collage.js <joueur>   -> sortie/<joueur>/collage/instagram_1..8.png, tiktok_1..8.png
+//   node src/render_collage.js <joueur>   -> sortie/<joueur>/collage/instagram_*.png, tiktok_*.png (fresque complète + une image par phase)
 //   écrit aussi sortie/<joueur>/fresque.png (fresque entière, 2960 px de large) et site/<slug>.jpg (vignette 1280×720 du site)
 //   --fresque : seulement sortie/<joueur>/fresque.png
 // Les images viennent du mode vidéo de sortie/<joueur>/interactive.html (?video=1) : chaque phase à la fin de son ouverture,
@@ -38,7 +38,7 @@ const OUT = path.join(DIR, 'collage');
   await page.waitForFunction(() => window.__ready);
   await page.addStyleTag({ content: ':root { --grid: transparent !important; }' });
   const { times } = await page.evaluate(() => {
-    const TLs = { intro: .5, rev: 1.5, hold: 1.0 }, n = 7;
+    const TLs = { intro: .5, rev: 1.5, hold: 1.0 }, n = STAGES.length;
     const ph = k => TLs.intro + k * (TLs.rev + TLs.hold) + TLs.rev + TLs.hold * .9;
     return { times: [window.__duration - .02, ...Array.from({ length: n }, (_, k) => ph(k))] };
   });
