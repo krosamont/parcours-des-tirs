@@ -1,0 +1,12 @@
+{
+  "nom": "Harry Kane",
+  "nom_court": "Kane",
+  "equipe": "Bayern Munich",
+  "slug": "kane_tirs",
+  "etapes": ["season", "zone", "sit", "body", "res", "pass"],
+  "note": "2023-24 : situation et pied non renseignés pour 146 tirs (seuls les penalties et les têtes sont connus)",
+  "noms_courts": {
+    "Luis Díaz": "Díaz",
+    "Aleksandar Pavlovic": "Pavlović"
+  }
+}

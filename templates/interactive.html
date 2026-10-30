@@ -339,8 +339,8 @@ function nodeLines(c, n) {
     if (BIG) lines.push(['m', `${t('Arrêté')} arrêtés · ${t('Hors cadre')} hors cadre`], ['m', `${t('Poteau')} poteaux`]);
     else lines.push(['m', `${t('Arrêté')} arrêtés · ${t('Hors cadre')} hors cadre · ${t('Poteau')} poteaux`]);
   } else if (st.key === 'res') {
-    const xg = c.pool.reduce((a, s) => a + (s.xg || 0), 0);
-    lines.push(['g', `xG cumulé ${xg.toFixed(1)} → ${tot - xg >= 0 ? '+' : ''}${(tot - xg).toFixed(1)} buts`]);
+    const w = c.pool.filter(s => s.xg != null), xg = w.reduce((a, s) => a + s.xg, 0), d = w.filter(s => s.goal).length - xg;
+    lines.push(['g', `xG cumulé ${xg.toFixed(1)} → ${d >= 0 ? '+' : ''}${d.toFixed(1)} buts${w.length < c.pool.length ? ` (${w.length} tirs avec xG)` : ''}`]);
   } else if (st.key === 'how') {
     lines.push(['g', `dont ${n.shots.filter(s => s.ftouch).length} en une touche`]);
   } else if (st.key === 'phase') {

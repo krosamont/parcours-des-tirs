@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Arvo:wght@400;700&display=block" rel="stylesheet">
 <style>
 :root {
-  --paper: #ebe7de; --grid: rgba(120,110,95,.10); --ink: #1d1b19; --muted: #6f6a62;
+  --paper: #ebe7de; --grid: transparent; --ink: #1d1b19; --muted: #6f6a62;
   --made: #5470c8; --miss: #cf6266; --label: rgba(246,243,236,.88);
 }
 * { box-sizing: border-box; }
@@ -41,6 +41,9 @@ svg { display: block; }
 .node-label .g { font-size: 12.5px; fill: #3d58a8; }
 .node-label .m { font-size: 12.5px; fill: #b0353b; }
 .axis { font-weight: 700; font-size: 26px; fill: #3b3833; letter-spacing: 1px; text-shadow: 1px 1px 0 rgba(0,0,0,.08); }
+.axis-sub { font-size: 14px; fill: var(--muted); letter-spacing: 2px; }
+.story { font-size: 18px; fill: #3b3833; font-style: italic; }
+.story .hl { font-weight: 700; font-style: normal; fill: #3d58a8; }
 .link { mix-blend-mode: multiply; transition: opacity .15s; }
 .dim .link { opacity: .12 !important; }
 .dim .link.hot { opacity: .95 !important; }
@@ -58,7 +61,7 @@ svg { display: block; }
       <div class="filters" id="filters"></div>
       <div class="photo"><img src="__PHOTO__" alt="__NOM__"></div>
     </header>
-    <svg id="flow" width="2960" height="1660"></svg>
+    <svg id="flow" width="2960" height="1720"></svg>
   </div>
 </div>
 <div class="tip" id="tip"></div>
@@ -68,22 +71,34 @@ const RENDER = new URLSearchParams(location.search).has('render');
 if (RENDER) document.body.classList.add('render');
 
 const W = 2960, TOP = 490, H = 1000, GAP = 34, BAR = 10;
-const COLS = [260, 660, 1060, 1460, 1900, 2300, 2700];      // espace élargi avant le zoom sur les buts
-const STAGES = [
-  { key: 'zone', title: 'ZONE', order: ['Surface de but', 'Surface · axe', 'Surface · gauche', 'Surface · droite', 'Point de penalty', 'Hors surface'] },
-  { key: 'sit',  title: 'SITUATION', order: ['Jeu placé', 'Contre-attaque', 'Penalty', 'Corner', 'Coup franc direct', 'Autre CPA*', 'Action individuelle'] },
-  { key: 'body', title: 'SURFACE', order: ['Pied droit', 'Pied gauche', 'Tête'] },
-  { key: 'res',  title: 'RÉSULTAT', order: ['But', 'Raté'] },
-  { key: 'pass', title: 'PASSEUR', goalsOnly: true, order: null },
-  { key: 'how',  title: 'COMMENT IL A MARQUÉ', goalsOnly: true, order: ['Pied droit', 'Pied gauche', 'Tête'] },
-  { key: 'phase', title: 'PHASE DU BUT', goalsOnly: true, order: ['Jeu placé', 'Contre-attaque', 'Penalty', 'Corner', 'Coup franc direct', 'Autre CPA*', 'Action individuelle'] },
-];
+// toutes les étapes possibles ; joueur.json peut en choisir l'ordre (champ « etapes »), sinon l'ordre par défaut
+// q = la question posée sous la colonne (le fil du récit), title = ce que montre la colonne
+const SIT = ['Jeu placé', 'Contre-attaque', 'Penalty', 'Corner', 'Coup franc direct', 'Autre CPA*', 'Action individuelle', 'Non renseignée'];
+const BODY = ['Pied droit', 'Pied gauche', 'Tête', 'Pied (non précisé)', 'Autre'];
+const STAGE_DEFS = {
+  season: { q: 'QUAND ?', title: 'la saison', order: [] },
+  zone:  { q: 'OÙ ?', title: 'la zone de frappe', order: ['Surface de but', 'Surface · axe', 'Surface · gauche', 'Surface · droite', 'Point de penalty', 'Hors surface'] },
+  sit:   { q: 'DANS QUEL CONTEXTE ?', title: 'la situation de jeu', order: SIT },
+  body:  { q: 'AVEC QUELLE PARTIE DU CORPS ?', title: 'la surface de frappe', order: BODY },
+  res:   { q: 'ET ALORS ?', title: 'le résultat', order: ['But', 'Raté'] },
+  pass:  { q: 'GRÂCE À QUI ?', title: 'le passeur', goalsOnly: true, order: null },
+  how:   { q: 'COMMENT IL A MARQUÉ ?', title: 'la surface du but', goalsOnly: true, order: BODY },
+  phase: { q: 'DANS QUELLE PHASE ?', title: 'la phase du but', goalsOnly: true, order: SIT },
+};
+
 // joueur, équipe, saisons et compétitions : injectés par build_fresque.py depuis joueurs/<id>/joueur.json et l'export
 const META = /*__META__*/{ nom: 'Joueur', equipe: 'Équipe', seasons: [], comps: [] };
 const SEASONS = [['all', 'Tout'], ...META.seasons];
 const COMPS = [['all', 'Toutes'], ...META.comps];
 const SEASON_ALL = META.seasons.length > 1 ? `${META.seasons[0][1]} → ${META.seasons[META.seasons.length - 1][1]}` : (META.seasons[0] || [, ''])[1];
 const COMP_ALL = META.comps.map(c => c[1]).join(' + ');
+STAGE_DEFS.season.order = META.seasons.map(x => x[1]);
+const STAGES = (META.etapes || ['zone', 'sit', 'body', 'res', 'pass', 'how', 'phase']).map(key => ({ key, ...STAGE_DEFS[key] }));
+// colonnes réparties de 260 à 2700, avec un peu plus d'espace avant le zoom sur les buts
+const COLS = (() => {
+  const zi = STAGES.findIndex(st => st.goalsOnly), steps = STAGES.length - 1 + (zi > 0 ? .1 : 0), step = 2440 / steps;
+  return STAGES.map((st, i) => 260 + step * (i + (zi > 0 && i >= zi ? .1 : 0)));
+})();
 const state = { season: 'all', comp: 'all' };
 const NS = 'http://www.w3.org/2000/svg';
 const svg = document.getElementById('flow'), tip = document.getElementById('tip');
@@ -114,13 +129,14 @@ function filters() {
 
 function prepare() {
   const shots = SHOTS.filter(s => (state.season === 'all' || s.season === state.season) && (state.comp === 'all' || s.comp === state.comp))
-                     .map(s => ({ ...s, res: s.goal ? 'But' : 'Raté', how: s.goal ? s.body : null, phase: s.goal ? s.sit : null, pass: null }));
+                     .map(s => ({ ...s, season: (META.seasons.find(x => x[0] === s.season) || [, s.season])[1], res: s.goal ? 'But' : 'Raté', how: s.goal ? s.body : null, phase: s.goal ? s.sit : null, pass: null, raw: s.season }));
   // passeurs des buts : les 7 plus fréquents, le reste en « Autres », sans passe en tête comme « Unassisted »
   const goals = shots.filter(s => s.goal), count = {};
   goals.forEach(s => { if (s.ast) count[s.ast] = (count[s.ast] || 0) + 1; });
   const top = Object.keys(count).sort((a, b) => count[b] - count[a] || a.localeCompare(b)).slice(0, 7);
   goals.forEach(s => { s.pass = !s.ast ? 'Sans passeur' : top.includes(s.ast) ? s.ast : 'Autres'; });
-  STAGES[4].order = ['Sans passeur', ...top, 'Autres'];
+  const ps = STAGES.find(st => st.key === 'pass');
+  if (ps) ps.order = ['Sans passeur', ...top, 'Autres'];
   return shots;
 }
 
@@ -130,7 +146,8 @@ function layout(shots) {
     const pool = st.goalsOnly ? shots.filter(s => s.goal) : shots;
     st.x = COLS[i];
     st.total = pool.length;
-    st.nodes = st.order.map(name => ({ name, shots: pool.filter(s => s[st.key] === name) })).filter(n => n.shots.length);
+    const extra = [...new Set(pool.map(s => s[st.key]))].filter(v => !st.order.includes(v));
+    st.nodes = [...st.order, ...extra].map(name => ({ name, shots: pool.filter(s => s[st.key] === name) })).filter(n => n.shots.length);
     st.nodes.forEach((n, j) => { n.idx = j; n.stage = i; n.goals = n.shots.filter(s => s.goal).length; });
   });
   // une échelle pour les tirs, une autre (zoom) pour les buts
@@ -254,8 +271,8 @@ function draw() {
         const t = k => n.shots.filter(s => s.type === k).length;
         lines.push(['m', `${t('Arrêté')} arrêtés · ${t('Hors cadre')} hors cadre · ${t('Poteau')} poteaux`]);
       } else if (st.key === 'res') {
-        const xg = n.shots.reduce((a, s) => a + (s.xg || 0), 0), xgAll = shots.reduce((a, s) => a + (s.xg || 0), 0);
-        lines.push(['g', `xG cumulé ${xgAll.toFixed(1)} → ${G - xgAll >= 0 ? '+' : ''}${(G - xgAll).toFixed(1)} buts au-dessus`]);
+        const x = xgGap(shots);
+        lines.push(['g', `xG cumulé ${x.xg.toFixed(1)} → ${x.d >= 0 ? '+' : ''}${x.d.toFixed(1)} buts ${x.d >= 0 ? 'au-dessus' : 'en dessous'}${x.partial ? ` (${x.n} tirs avec xG)` : ''}`]);
       } else if (st.key === 'phase') {
         const all = shots.filter(s => s.sit === n.name).length;
         lines.push(['g', `sur ${all} tirs · ${pct(tot, all)} de réussite`]);
@@ -272,24 +289,89 @@ function draw() {
       hover(bar, `<b>${n.name}</b><br>${tot} ${st.goalsOnly ? 'buts' : 'tirs'}`, gn, nodeLinks);
     }
     place(placed);
-    const ax = el('text', { class: 'axis', x: st.x, y: TOP + H + 70, 'text-anchor': 'middle' }, gt);
-    ax.textContent = st.title;
+    // questions plus petites quand les colonnes sont serrées (7 étapes)
+    const ax = el('text', { class: 'axis', x: st.x, y: TOP + H + 66, 'text-anchor': 'middle', style: STAGES.length > 6 ? 'font-size:20px' : '' }, gt);
+    ax.textContent = st.q;
+    const as = el('text', { class: 'axis-sub', x: st.x, y: TOP + H + 90, 'text-anchor': 'middle' }, gt);
+    as.textContent = st.title.toUpperCase();
+    story(gt, st, shots, N, G, TOP + H + 122);
   });
   // annotation du zoom
-  const zx = (COLS[3] + COLS[4]) / 2;
-  const z = el('text', { x: zx, y: TOP - 18, 'text-anchor': 'middle', 'font-size': 15, fill: '#3d58a8', 'font-style': 'italic' }, gt);
-  z.textContent = `zoom ×${(STAGES[4].k / STAGES[3].k || 0).toFixed(1)} sur les ${G} buts →`;
+  const zi = STAGES.findIndex(st => st.goalsOnly);
+  if (zi > 0) {
+    const z = el('text', { x: (COLS[zi - 1] + COLS[zi]) / 2, y: TOP - 18, 'text-anchor': 'middle', 'font-size': 15, fill: '#3d58a8', 'font-style': 'italic' }, gt);
+    z.textContent = `zoom ×${(STAGES[zi].k / STAGES[zi - 1].k || 0).toFixed(1)} sur les ${G} buts →`;
+  }
 
   pitch(shots);
 
   // légende
-  const lg = el('g', { transform: `translate(${W / 2 - 150},${TOP + H + 135})` }, gt);
+  const lg = el('g', { transform: `translate(${W / 2 - 150},${TOP + H + 200})` }, gt);
   [['Made', 'But', 1], ['Missed', 'Raté', 0]].forEach(([, t, gl_], j) => {
     el('rect', { x: j * 170, y: -14, width: 34, height: 18, fill: color(gl_) }, lg);
     const tx = el('text', { x: j * 170 + 46, y: 1, 'font-size': 22, fill: '#3b3833' }, lg); tx.textContent = t;
   });
-  const src = el('text', { x: W - 40, y: TOP + H + 135, 'text-anchor': 'end', 'font-size': 13, fill: 'var(--muted)' }, gt);
+  const src = el('text', { x: W - 40, y: TOP + H + 200, 'text-anchor': 'end', 'font-size': 13, fill: 'var(--muted)' }, gt);
   src.textContent = '* CPA : coup de pied arrêté · Données : WhoScored × FotMob · zones recalculées depuis x/y · passeur = joueur associé au tir';
+  if (META.note) {
+    const nt = el('text', { x: W - 40, y: TOP + H + 220, 'text-anchor': 'end', 'font-size': 13, fill: 'var(--muted)' }, gt);
+    nt.textContent = META.note;
+  }
+}
+
+// xG : seuls les tirs qui en ont un comptent (certains exports n'en donnent pas, ex. Kane 2023-24 en ancienne convention)
+function xgGap(shots) {
+  const w = shots.filter(s => s.xg != null), xg = w.reduce((a, s) => a + s.xg, 0), g = w.filter(s => s.goal).length;
+  return { xg, d: g - xg, partial: w.length < shots.length, n: w.length };
+}
+
+// le récit sous chaque colonne : une phrase calculée sur la sélection, avec le chiffre clé en gras
+function story(parent, st, shots, N, G, y) {
+  const pool = st.goalsOnly ? shots.filter(s => s.goal) : shots, by = {};
+  pool.forEach(s => { const k = s[st.key]; by[k] = by[k] || { n: 0, g: 0, xg: 0 }; by[k].n++; by[k].g += s.goal; by[k].xg += s.xg || 0; });
+  const known = Object.entries(by).filter(([k]) => !/Non renseign|non précisé|Autres|Sans passeur/.test(k));
+  const top = key => known.slice().sort((a, b) => b[1][key] - a[1][key])[0] || ['–', { n: 0, g: 0 }];
+  const low = t => t.charAt(0).toLowerCase() + t.slice(1);
+  let parts;   // [texte, gras ?] ; '\n' = retour à la ligne
+  if (st.key === 'season') {
+    const [k, v] = top('g');
+    parts = [['Sa saison record : ', 0], [`${k}`, 1], [',\n', 0], [`${v.g} buts`, 1], [` en ${v.n} tirs`, 0]];
+  } else if (st.key === 'zone') {
+    const box = pool.filter(s => s.zone !== 'Hors surface');
+    const [k, v] = top('g');
+    parts = [[pct(box.filter(s => s.goal).length, G), 1], [' de ses buts dans la surface,\n', 0], [`${v.g}`, 1], [` depuis « ${low(k)} »`, 0]];
+  } else if (st.key === 'sit') {
+    const [k, v] = top('n'), pen = by['Penalty'];
+    parts = [[pct(v.n, N), 1], [` de ses tirs en ${low(k)}`, 0]];
+    if (pen) parts.push([',\npenalty : ', 0], [`${pen.g}/${pen.n}`, 1], [' transformés', 0]);
+  } else if (st.key === 'body') {
+    const [k, v] = top('g'), head = by['Tête'];
+    parts = [[pct(v.g, G), 1], [` de ses buts du ${low(k)}`, 0]];
+    if (head) parts.push([',\n', 0], [`${head.g}`, 1], [` de la tête sur ${head.n} essais`, 0]);
+  } else if (st.key === 'how') {
+    const [k, v] = top('g'), one = pool.filter(s => s.ftouch).length;
+    parts = [[pct(v.g, G), 1], [` de ses buts du ${low(k)}`, 0]];
+    if (one) parts.push([',\n', 0], [`${one}`, 1], [' en une touche', 0]);
+  } else if (st.key === 'res') {
+    const { d } = xgGap(shots);
+    parts = [[`${G} buts`, 1], [` sur ${N} tirs (${pct(G, N)}),\n`, 0], [`${d >= 0 ? '+' : ''}${d.toFixed(1)}`, 1], [' par rapport à son xG', 0]];
+  } else if (st.key === 'pass') {
+    const [k, v] = top('n'), solo = by['Sans passeur'];
+    parts = [[k, 1], [` lui a servi ${v.n} buts`, 0]];
+    if (solo) parts.push([',\n', 0], [`${solo.n}`, 1], [' sans passe décisive', 0]);
+  } else if (st.key === 'phase') {
+    const [k, v] = top('n');
+    parts = [[pct(v.n, G), 1], [` de ses buts en ${low(k)}`, 0]];
+  } else return;
+  const t = el('text', { class: 'story', x: st.x, y, 'text-anchor': 'middle' }, parent);
+  let line = el('tspan', { x: st.x, dy: 0 }, t);
+  for (const [txt, bold] of parts) {
+    const chunks = txt.split('\n');
+    chunks.forEach((c, j) => {
+      if (j > 0) line = el('tspan', { x: st.x, dy: 24 }, t);
+      if (c) { const sp = el('tspan', bold ? { class: 'hl' } : {}, line); sp.textContent = c; }
+    });
+  }
 }
 
 // demi-terrain (but en haut, gauche de l'attaquant à gauche) : rappelle d'où viennent les zones

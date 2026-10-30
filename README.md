@@ -63,9 +63,28 @@ python3 src/build_fresque.py haaland --carte    # ajoute la carte dans site/proj
 | `nom_court` | non | pour la carte et le partage (« Mbappé, le parcours de ses tirs ») ; par défaut le dernier mot de `nom` |
 | `slug` | non | adresse sur le site, `/projet/<slug>/` ; par défaut `<joueur>_tirs` |
 | `noms_courts` | non | noms des passeurs à raccourcir (`"Vinícius Júnior": "Vinícius"`) ; par défaut leur dernier mot |
+| `etapes` | non | ordre des colonnes de la fresque, parmi `season`, `zone`, `sit`, `body`, `res`, `pass`, `how`, `phase` ; par défaut `zone → sit → body → res → pass → how → phase` (Kane : `season → zone → sit → body → res → pass`) |
+| `note` | non | une ligne ajoutée en bas de la fresque (ex. données manquantes) |
 
 Le reste se déduit de l'export : saisons, compétitions (libellés dans `COMPETITIONS` de `src/build_fresque.py`, à
 compléter pour une nouvelle compétition), adversaires, nombre de tirs et de buts.
+
+### Formats d'export acceptés
+
+- celui de `sql/requete_motherduck.sql` (Mbappé) ;
+- l'export « tous les événements » d'un joueur (`team_name`, `match_date`, `fixture`, `related_player_name`,
+  `is_header`, `is_penalty`…), comme `joueurs/kane/export.csv` : `normalise()` dans `src/build_fresque.py` garde les
+  tirs et renomme les colonnes. Passeur = joueur de la passe qui précède le tir (`related_event_type = Pass`).
+  Pour les matchs en ancienne convention (Kane 2023-24), situation, pied et xG manquent : penalty et tête se déduisent
+  de `is_penalty` / `is_header`, le reste devient « Non renseignée » / « Pied (non précisé) », et l'écart à l'xG ne
+  porte que sur les tirs qui ont un xG.
+
+### Le récit sous la fresque
+
+Sous chaque colonne : une question (QUAND ? OÙ ? DANS QUEL CONTEXTE ? AVEC QUELLE PARTIE DU CORPS ? ET ALORS ?
+GRÂCE À QUI ?…), ce que montre la colonne, puis une phrase calculée sur la sélection avec le chiffre clé en gras
+(« Sa saison record : 2025-26, 50 buts en 165 tirs », « Olise lui a servi 13 buts »…). Fonction `story()` de
+`templates/fresque.html`.
 
 ## Chaîne complète
 
@@ -158,7 +177,7 @@ Avec `?render=1`, les boutons sont masqués pour l'export d'image.
 ## 4. Visuels pour les réseaux
 
 ```bash
-node src/render_collage.js <joueur>                   # fresque.png, vignette, carrousel d'images
+node src/render_collage.js <joueur> [--fresque]       # fresque.png, vignette, carrousel d'images (--fresque : fresque seule)
 node src/render_collage_video.js <joueur> [--only 3]  # carrousel de petites vidéos (~4 min)
 node src/render_collage_video.js <joueur> --vertical [--pause 4]  # vidéo verticale pour se filmer en dessous (~7 min)
 node src/render_video.js <joueur> [--to 5]            # vidéo complète + GIF

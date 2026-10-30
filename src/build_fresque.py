@@ -25,8 +25,10 @@ BOX_X, SIX_X = 83 * 1.05, 94.2 * 1.05             # 87.15 m, 98.9 m
 BOX_Y, SIX_Y = (21.1 * .68, 78.9 * .68), (36.8 * .68, 63.2 * .68)
 
 SITUATION = {'RegularPlay': 'Jeu placé', 'FastBreak': 'Contre-attaque', 'Penalty': 'Penalty', 'FromCorner': 'Corner',
-             'FreeKick': 'Coup franc direct', 'SetPiece': 'Autre CPA*', 'ThrowInSetPiece': 'Autre CPA*', 'IndividualPlay': 'Action individuelle'}
-BODY = {'RightFoot': 'Pied droit', 'LeftFoot': 'Pied gauche', 'Header': 'Tête', 'OtherBodyPart': 'Autre'}
+             'FreeKick': 'Coup franc direct', 'SetPiece': 'Autre CPA*', 'ThrowInSetPiece': 'Autre CPA*', 'IndividualPlay': 'Action individuelle',
+             'Unknown': 'Non renseignée'}
+BODY = {'RightFoot': 'Pied droit', 'LeftFoot': 'Pied gauche', 'Header': 'Tête', 'OtherBodyPart': 'Autre', 'OtherBodyParts': 'Autre',
+        'Foot': 'Pied (non précisé)'}
 TYPE = {'Goal': 'But', 'SavedShot': 'Arrêté', 'MissedShots': 'Hors cadre', 'ShotOnPost': 'Poteau'}
 # libellés des compétitions (colonne competition de foot.bronze.events), dans l'ordre d'affichage
 COMPETITIONS = {'laliga': 'Liga', 'premier-league': 'Premier League', 'serie-a': 'Serie A', 'bundesliga': 'Bundesliga',
@@ -67,8 +69,26 @@ def write_sql(cfg):
     print(f"joueurs/{cfg['id']}/requete.sql : à lancer sur MotherDuck, puis exporter le résultat dans joueurs/{cfg['id']}/export.csv")
 
 
+def normalise(d):
+    """Ramène un export au format de sql/requete_motherduck.sql. Deux formats sont reconnus :
+    - celui de la requête (teamName, fm_utcTime, shot_related_player_name…) : rien à faire ;
+    - l'export « tous les événements » (team_name, match_date, fixture, related_player_name, is_header, is_penalty…),
+      comme joueurs/kane/export.csv : on garde les tirs et on renomme. Pour les matchs en ancienne convention, situation
+      et shot_type sont vides : penalty et tête se déduisent de is_penalty / is_header, le reste devient « non renseigné »."""
+    if 'teamName' in d.columns:
+        return d
+    d = d[d.type.isin(list(TYPE))].copy()
+    d['situation'] = d.situation.where(d.situation.notna(), d.is_penalty.map({True: 'Penalty'})).fillna('Unknown')
+    d['shot_type'] = d.shot_type.where(d.shot_type.notna(), d.is_header.map({True: 'Header'})).fillna('Foot')
+    # passeur : le joueur de la passe qui précède le tir (pas un rebond sur un autre tir)
+    d['shot_related_player_name'] = d.related_player_name.where(d.related_event_type == 'Pass')
+    teams = d.fixture.str.split(' - ', n=1, expand=True)
+    d['ws_home_name'], d['ws_away_name'] = teams[0], teams[1]
+    return d.rename(columns={'team_name': 'teamName', 'match_date': 'fm_utcTime'}).assign(FirstTouch=False)
+
+
 def shots_of(cfg):
-    d = pd.read_csv(cfg['dir'] / 'export.csv')
+    d = normalise(pd.read_csv(cfg['dir'] / 'export.csv'))
     short = lambda n: cfg['noms_courts'].get(n, n.split()[-1]) if isinstance(n, str) else None
     shots = []
     for r in d.itertuples():
@@ -89,7 +109,7 @@ def meta_of(cfg, shots):
     seasons = sorted({s['season'] for s in shots})
     order = list(COMPETITIONS)
     comps = sorted({s['comp'] for s in shots}, key=lambda c: (order.index(c) if c in order else len(order), c))
-    return {'nom': cfg['nom'], 'equipe': cfg['equipe'],
+    return {'nom': cfg['nom'], 'equipe': cfg['equipe'], 'etapes': cfg.get('etapes'), 'note': cfg.get('note', ''),
             'seasons': [[s, s[:5] + s[-2:] if re.fullmatch(r'\d{4}-\d{4}', s) else s] for s in seasons],
             'comps': [[c, COMPETITIONS.get(c, c.replace('-', ' ').title())] for c in comps]}
 
