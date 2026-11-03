@@ -22,7 +22,7 @@
   .wrap { max-width: 1080px; margin: 0 auto; padding: 40px 16px 64px; }
 
   .top { display: flex; align-items: center; gap: 12px; margin-bottom: 40px; }
-  .top img { width: 36px; height: 36px; border-radius: 10px; }
+  .top img { width: 36px; height: 36px; border-radius: 0; }
   .top a { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; }
   .top a:hover { color: var(--text); }
   h1 { margin: 0; font-size: clamp(32px, 6vw, 52px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
@@ -92,7 +92,7 @@ a.theme-switch:hover { background: #1d1b19 !important; color: #ebe7de !important
 <body>
 <div class="wrap">
   <div class="top">
-    <img src="/assets/images/logo.png" alt="">
+    <img src="/assets/images/logo_orange.png" alt="">
     <a href="/clair/">← Data Workers</a>
     <a class="theme-switch" href="../">Version sombre</a>
   </div>
@@ -168,6 +168,28 @@ a.theme-switch:hover { background: #1d1b19 !important; color: #ebe7de !important
         <span class="live"><i></i>Un nouvel épisode chaque jour ouvré</span>
         <div class="tags"><span>Apple Podcasts</span><span>Spotify</span><span>IA</span></div>
         <span class="go">Écouter →</span>
+      </div>
+    </a>
+    <a class="card" href="/projet/comparaison/clair/">
+      <div class="thumb" style="background-image:url('assets/comparaison.jpg')" role="img" aria-label="La carte de France des clubs de l'élite en 2025/26, le PSG champion"></div>
+      <div class="body">
+        <span class="kind">Data visualisation · Sport</span>
+        <h2>Les championnats sur la carte</h2>
+        <p>Cinquante saisons de championnat de France, d'Angleterre et d'Espagne, de Ligue des champions et de NBA : chaque club
+          engagé est placé sur la carte, saison après saison, avec les titres par région et la frise des champions.</p>
+        <div class="tags"><span>Python</span><span>geoBoundaries</span><span>Wikipedia</span><span>Vidéo</span></div>
+        <span class="go">Choisir une ligue →</span>
+      </div>
+    </a>
+    <a class="card" href="/projet/ballon_dor/clair/">
+      <div class="thumb" style="background-image:url('assets/ballon_dor.jpg')" role="img" aria-label="Le bilan des Ballons d'Or par championnat : Espagne 18, Italie 16, Allemagne 8, France 4, Angleterre 3"></div>
+      <div class="body">
+        <span class="kind">Vidéo · Data storytelling</span>
+        <h2>Le Ballon d'Or par championnat</h2>
+        <p>Dans quels championnats jouaient les joueurs classés au Ballon d'Or depuis 1976 ? Le championnat le plus riche du
+          monde n'a eu que trois lauréats : la Premier League racontée par les données, du Heysel à l'âge d'or de l'Italie.</p>
+        <div class="tags"><span>Football</span><span>Ballon d'Or</span><span>Vidéo</span></div>
+        <span class="go">Regarder →</span>
       </div>
     </a>
   </main>

@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parcours des tirs</title>
+<style>
+:root { --fond: #ffffff; --surface: #f7f8fa; --bord: #e3e6ea; --texte: #1b1f24; --doux: #5b6573; --accent: #2b6cb0; --code: #eef1f5; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --fond: #14171b; --surface: #1c2026; --bord: #2c323a; --texte: #e8eaed; --doux: #a3acb8; --accent: #79b0ef; --code: #232830; } }
+:root[data-theme="dark"] { --fond: #14171b; --surface: #1c2026; --bord: #2c323a; --texte: #e8eaed; --doux: #a3acb8; --accent: #79b0ef; --code: #232830; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fond); color: var(--texte); font: 16px/1.55 -apple-system, 'Segoe UI', Roboto, sans-serif; }
+main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 48px; }
+a { color: var(--accent); }
+nav.fil { font-size: 0.9rem; color: var(--doux); margin-bottom: 12px; }
+h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+h2 { font-size: 1.2rem; margin: 32px 0 10px; }
+.meta { color: var(--doux); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.etiquette { background: var(--surface); border: 1px solid var(--bord); border-radius: 999px; padding: 2px 10px; font-size: 0.85rem; }
+.resume { font-size: 1.05rem; max-width: 80ch; }
+.note { background: var(--surface); border-left: 4px solid #d69e2e; padding: 10px 14px; border-radius: 4px; max-width: 80ch; }
+figure { margin: 0 0 26px; }
+figure iframe, figure img, figure video, figure embed { width: 100%; border: 1px solid var(--bord); border-radius: 8px; background: #fff; display: block; }
+figure img, figure video { height: auto; }
+figcaption { font-size: 0.9rem; color: var(--doux); margin-top: 6px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+pre { background: var(--code); padding: 12px 14px; border-radius: 6px; overflow-x: auto; font-size: 0.9rem; }
+ul.fichiers { columns: 2 260px; padding-left: 18px; } ul.fichiers li { break-inside: avoid; }
+.grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.carte { border: 1px solid var(--bord); border-radius: 10px; overflow: hidden; background: var(--surface); text-decoration: none; color: inherit; display: flex; flex-direction: column; }
+.carte:hover { border-color: var(--accent); }
+.carte .vignette { aspect-ratio: 16 / 9; background: var(--code) center / cover no-repeat; }
+.carte .vignette.vide { display: flex; align-items: center; justify-content: center; color: var(--doux); font-size: 0.85rem; }
+.carte .corps { padding: 10px 12px 14px; } .carte h3 { margin: 0 0 4px; font-size: 1rem; } .carte p { margin: 0; color: var(--doux); font-size: 0.88rem; }
+.carte .annees { font-size: 0.8rem; color: var(--doux); }
+</style>
+</head>
+<body>
+<main>
+<nav class="fil"><a href="../../../index.html">Tous les projets</a> › Sport</nav>
+<h1>Parcours des tirs</h1>
+<div class="meta"><span>2026</span><span>·</span><span>Sport</span><span class="etiquette">JavaScript</span><span class="etiquette">Shell</span><span class="etiquette">SQL</span><span class="etiquette">Python</span></div>
+<h2>Ce que fait le projet</h2>
+<p class="resume">Sankey « Shot Flow » des tirs d'un joueur : zone → situation → surface de frappe → résultat, puis passeur, façon de marquer et phase du but. Une fresque, une page interactive et des vidéos par joueur (Mbappé, Kane), publiées sur data-workers.com.</p>
+<h2>Le projet en action</h2>
+<figure><iframe src="sortie/mbappe/interactive.html" style="height:760px" loading="lazy" title="Page interactive de Kylian Mbappé (cliquer sur les flux)"></iframe><figcaption><span>Page interactive de Kylian Mbappé (cliquer sur les flux)</span><a href="sortie/mbappe/interactive.html" target="_blank">Ouvrir en plein écran</a></figcaption></figure>
+<figure><a href="sortie/mbappe/fresque.png" target="_blank"><img src="sortie/mbappe/fresque.png" alt="La fresque" loading="lazy"></a><figcaption><span>La fresque</span><a href="sortie/mbappe/fresque.png" target="_blank">Ouvrir en plein écran</a></figcaption></figure>
+<h2>Comment l'utiliser</h2>
+<pre>pip install -r requirements.txt &amp;&amp; npm install
+./faire_joueur.sh mbappe</pre>
+<p class="doux">Les commandes se lancent depuis ce dossier.</p>
+<h2>Autres pages et documents</h2>
+<ul class="fichiers">
+<li><a href="site/projet_index.html" target="_blank">site/projet_index.html</a></li>
+<li><a href="site/projet_index_clair.html" target="_blank">site/projet_index_clair.html</a></li>
+<li><a href="sortie/kane/collage/video_1.mp4" target="_blank">sortie/kane/collage/video_1.mp4</a></li>
+<li><a href="sortie/kane/collage/video_2.mp4" target="_blank">sortie/kane/collage/video_2.mp4</a></li>
+<li><a href="sortie/kane/collage/video_3.mp4" target="_blank">sortie/kane/collage/video_3.mp4</a></li>
+<li><a href="sortie/kane/collage/video_4.mp4" target="_blank">sortie/kane/collage/video_4.mp4</a></li>
+<li><a href="sortie/kane/collage/video_5.mp4" target="_blank">sortie/kane/collage/video_5.mp4</a></li>
+<li><a href="sortie/kane/collage/video_6.mp4" target="_blank">sortie/kane/collage/video_6.mp4</a></li>
+<li><a href="sortie/kane/collage/video_7.mp4" target="_blank">sortie/kane/collage/video_7.mp4</a></li>
+<li><a href="sortie/kane/fresque.html" target="_blank">sortie/kane/fresque.html</a></li>
+<li><a href="sortie/kane/interactive.html" target="_blank">sortie/kane/interactive.html</a></li>
+<li><a href="sortie/kane/site/clair/index.html" target="_blank">sortie/kane/site/clair/index.html</a></li>
+<li><a href="sortie/kane/site/index.html" target="_blank">sortie/kane/site/index.html</a></li>
+<li><a href="sortie/kane/video.mp4" target="_blank">sortie/kane/video.mp4</a></li>
+<li><a href="sortie/kane/video_vertical.mp4" target="_blank">sortie/kane/video_vertical.mp4</a></li>
+<li><a href="sortie/mbappe/collage/video_1.mp4" target="_blank">sortie/mbappe/collage/video_1.mp4</a></li>
+<li><a href="sortie/mbappe/collage/video_2.mp4" target="_blank">sortie/mbappe/collage/video_2.mp4</a></li>
+<li><a href="sortie/mbappe/collage/video_3.mp4" target="_blank">sortie/mbappe/collage/video_3.mp4</a></li>
+<li><a href="sortie/mbappe/collage/video_4.mp4" target="_blank">sortie/mbappe/collage/video_4.mp4</a></li>
+<li><a href="sortie/mbappe/collage/video_5.mp4" target="_blank">sortie/mbappe/collage/video_5.mp4</a></li>
+<li><a href="sortie/mbappe/collage/video_6.mp4" target="_blank">sortie/mbappe/collage/video_6.mp4</a></li>
+<li><a href="sortie/mbappe/collage/video_7.mp4" target="_blank">sortie/mbappe/collage/video_7.mp4</a></li>
+<li><a href="sortie/mbappe/collage/video_8.mp4" target="_blank">sortie/mbappe/collage/video_8.mp4</a></li>
+<li><a href="sortie/mbappe/fresque.html" target="_blank">sortie/mbappe/fresque.html</a></li>
+<li><a href="sortie/mbappe/site/clair/index.html" target="_blank">sortie/mbappe/site/clair/index.html</a></li>
+<li><a href="sortie/mbappe/site/index.html" target="_blank">sortie/mbappe/site/index.html</a></li>
+<li><a href="sortie/mbappe/video.mp4" target="_blank">sortie/mbappe/video.mp4</a></li>
+<li><a href="sortie/mbappe/video_vertical.mp4" target="_blank">sortie/mbappe/video_vertical.mp4</a></li>
+<li><a href="templates/fresque.html" target="_blank">templates/fresque.html</a></li>
+<li><a href="templates/interactive.html" target="_blank">templates/interactive.html</a></li>
+</ul>
+<h2>Fichiers</h2>
+<ul class="fichiers">
+<li>deploy.sh</li>
+<li><b>docs/</b> <span class="doux">(6 fichiers)</span></li>
+<li>faire_joueur.sh</li>
+<li><b>joueurs/</b> <span class="doux">(7 fichiers)</span></li>
+<li>package-lock.json</li>
+<li>package.json</li>
+<li>README.md</li>
+<li>requirements.txt</li>
+<li><b>site/</b> <span class="doux">(2 fichiers)</span></li>
+<li><b>sortie/</b> <span class="doux">(63 fichiers)</span></li>
+<li><b>sql/</b> <span class="doux">(1 fichiers)</span></li>
+<li><b>src/</b> <span class="doux">(6 fichiers)</span></li>
+<li><b>templates/</b> <span class="doux">(2 fichiers)</span></li>
+<li><b>themes/</b> <span class="doux">(2 fichiers)</span></li>
+</ul>
+</main>
+</body>
+</html>

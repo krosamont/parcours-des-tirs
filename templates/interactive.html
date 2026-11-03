@@ -171,6 +171,18 @@ body.video.split { height: 1120px; }
   <div class="ph" id="ph"></div><div class="src">* CPA : coup de pied arrêté · Données : WhoScored × FotMob</div></div>
 <script>
 const SHOTS = /*__SHOTS__*/[];
+// langue de la page : build_fresque.py écrit true pour la version anglaise (/en/projet/<slug>/) ; les données gardent leurs
+// libellés français (clés des blocs et des filtres), tr() ne traduit que l'affichage
+const EN = /*__EN__*/false;
+const W_ = (fr, en) => EN ? en : fr;
+const TR = EN ? { 'Surface de but': 'Six-yard box', 'Surface · axe': 'Box · centre', 'Surface · gauche': 'Box · left', 'Surface · droite': 'Box · right',
+  'Point de penalty': 'Penalty spot', 'Hors surface': 'Outside the box', 'Jeu placé': 'Open play', 'Contre-attaque': 'Counter-attack',
+  'Coup franc direct': 'Direct free kick', 'Autre CPA*': 'Other set piece*', 'Action individuelle': 'Solo action', 'Non renseignée': 'Not recorded',
+  'Pied droit': 'Right foot', 'Pied gauche': 'Left foot', 'Tête': 'Header', 'Pied (non précisé)': 'Foot (unspecified)', 'Autre': 'Other',
+  'But': 'Goal', 'Raté': 'Missed', 'Sans passeur': 'No assist', 'Autres': 'Others', 'Arrêté': 'Saved', 'Hors cadre': 'Off target', 'Poteau': 'Post',
+  'Tout': 'All', 'Toutes': 'All', 'Liga': 'LaLiga', 'Ligue des champions': 'Champions League', 'Ligue Europa': 'Europa League',
+  'Ligue Europa Conférence': 'Conference League' } : {};
+const tr = v => TR[v] ?? v;
 const W = 2960, HH = 1040, TOP = 40, H = 840, GAP = 36, BAR = 12;
 // toutes les étapes possibles ; joueur.json peut en choisir l'ordre (champ « etapes »), comme pour la fresque
 // q = la question sous la colonne (le fil du récit), title = ce que montre la colonne
@@ -186,12 +198,15 @@ const STAGE_DEFS = {
   how:   { q: 'COMMENT IL A MARQUÉ ?', title: 'la surface du but', goalsOnly: true, order: BODY },
   phase: { q: 'DANS QUELLE PHASE ?', title: 'la phase du but', goalsOnly: true, order: SIT },
 };
+if (EN) for (const [k, q, title] of [['season', 'WHEN?', 'the season'], ['zone', 'WHERE?', 'the shooting zone'], ['sit', 'IN WHAT CONTEXT?', 'the game situation'],
+  ['body', 'WITH WHICH BODY PART?', 'the body part'], ['res', 'AND THEN?', 'the outcome'], ['pass', 'THANKS TO WHOM?', 'the assist'],
+  ['how', 'HOW DID HE SCORE?', 'the scoring body part'], ['phase', 'IN WHICH PHASE?', 'the phase of the goal']]) Object.assign(STAGE_DEFS[k], { q, title });
 // joueur, équipe, saisons et compétitions : injectés par build_fresque.py depuis joueurs/<id>/joueur.json et l'export
 const META = /*__META__*/{ nom: 'Joueur', equipe: 'Équipe', seasons: [], comps: [] };
 const SEASONS = [['all', 'Tout'], ...META.seasons];
 const COMPS = [['all', 'Toutes'], ...META.comps];
 const SEASON_ALL = META.seasons.length > 1 ? `${META.seasons[0][1]} → ${META.seasons[META.seasons.length - 1][1]}` : (META.seasons[0] || [, ''])[1];
-const COMP_ALL = META.comps.map(c => c[1]).join(' + ');
+const COMP_ALL = META.comps.map(c => tr(c[1])).join(' + ');
 STAGE_DEFS.season.order = META.seasons.map(x => x[1]);
 const STAGES = (META.etapes || ['zone', 'sit', 'body', 'res', 'pass', 'how', 'phase']).map(key => ({ key, ...STAGE_DEFS[key], base: STAGE_DEFS[key].order }));
 const COLS = STAGES.map((st, i) => 300 + 2420 / (STAGES.length - 1) * i);
@@ -202,7 +217,7 @@ const state = { season: 'all', comp: 'all', mode: qs.get('path') || qs.get('mode
 const NS = 'http://www.w3.org/2000/svg';
 const svg = document.getElementById('flow'), map = document.getElementById('map'), tip = document.getElementById('tip'), wrap = document.getElementById('wrap');
 const pct = (n, t) => t ? Math.round(100 * n / t) + '%' : '–';
-const plural = (n, w) => `${n} ${w}${n > 1 ? 's' : ''}`;
+const plural = (n, w) => `${n} ${w}${n > 1 ? (EN && /(s|ss)$/.test(w) ? 'es' : 's') : ''}`;
 const color = goal => goal ? 'var(--made)' : 'var(--miss)';
 let SHOTS_F = [];
 const HOVER = matchMedia('(hover: hover)').matches;
@@ -348,23 +363,25 @@ function place(labels) {
 
 function nodeLines(c, n) {
   const tot = n.shots.length, base = c.pool.length, st = c.st;
-  const lines = [['n', n.name], ['c', `${tot}  (${pct(tot, base)}${st.goalsOnly ? ' des buts' : ''})`]];
+  const lines = [['n', tr(n.name)], ['c', `${tot}  (${pct(tot, base)}${st.goalsOnly ? W_(' des buts', ' of goals') : ''})`]];
   if (st.key === 'res' && n.name === 'Raté') {
     const t = k => n.shots.filter(s => s.type === k).length;
-    if (BIG) lines.push(['m', `${t('Arrêté')} arrêtés · ${t('Hors cadre')} hors cadre`], ['m', `${t('Poteau')} poteaux`]);
-    else lines.push(['m', `${t('Arrêté')} arrêtés · ${t('Hors cadre')} hors cadre · ${t('Poteau')} poteaux`]);
+    const m1 = W_(`${t('Arrêté')} arrêtés · ${t('Hors cadre')} hors cadre`, `${t('Arrêté')} saved · ${t('Hors cadre')} off target`),
+      m2 = W_(`${t('Poteau')} poteaux`, `${t('Poteau')} hit the post`);
+    if (BIG) lines.push(['m', m1], ['m', m2]);
+    else lines.push(['m', `${m1} · ${m2}`]);
   } else if (st.key === 'res') {
     // xG affiché seulement si tous les tirs en ont un et que l'écart reste vraisemblable (au plus 15 % des buts, ou 5)
     const w = c.pool.filter(s => s.xg != null), xg = w.reduce((a, s) => a + s.xg, 0), d = w.filter(s => s.goal).length - xg;
-    if (w.length === c.pool.length && Math.abs(d) <= Math.max(5, .15 * tot)) lines.push(['g', `xG cumulé ${xg.toFixed(1)} → ${d >= 0 ? '+' : ''}${d.toFixed(1)} buts`]);
-    else lines.push(['g', `${pct(tot, c.pool.length)} de réussite`]);
+    if (w.length === c.pool.length && Math.abs(d) <= Math.max(5, .15 * tot)) lines.push(['g', W_(`xG cumulé ${xg.toFixed(1)} → ${d >= 0 ? '+' : ''}${d.toFixed(1)} buts`, `cumulative xG ${xg.toFixed(1)} → ${d >= 0 ? '+' : ''}${d.toFixed(1)} goals`)]);
+    else lines.push(['g', `${pct(tot, c.pool.length)} ${W_('de réussite', 'conversion')}`]);
   } else if (st.key === 'how') {
-    lines.push(['g', `dont ${n.shots.filter(s => s.ftouch).length} en une touche`]);
+    lines.push(['g', W_(`dont ${n.shots.filter(s => s.ftouch).length} en une touche`, `incl. ${n.shots.filter(s => s.ftouch).length} first-time`)]);
   } else if (st.key === 'phase') {
     const all = SHOTS_F.filter(s => s.sit === n.name).length;
-    lines.push(['g', `sur ${all} tirs · ${pct(tot, all)} de réussite`]);
+    lines.push(['g', W_(`sur ${all} tirs · ${pct(tot, all)} de réussite`, `from ${all} shots · ${pct(tot, all)} conversion`)]);
   } else if (st.key !== 'pass') {
-    lines.push(['g', `${plural(n.goals, 'but')} · ${pct(n.goals, tot)} de réussite`]);
+    lines.push(['g', `${plural(n.goals, W_('but', 'goal'))} · ${pct(n.goals, tot)} ${W_('de réussite', 'conversion')}`]);
   }
   return lines;
 }
@@ -443,7 +460,7 @@ function draw(animate = -1, smooth = true) {
     if (ci > 0) for (const l of (FULL() ? linksFull : links)(cols[ci - 1], c)) {
       const f = state.focus && FULL() ? (cols.some(cc => cc.focus && (cc.focus === l.src || cc.focus === l.tgt)) ? .9 : .4) : .75;
       const p = el('path', { class: 'link', d: band(cols[ci - 1].x, l.sy, l.sw, c.x, l.ty, l.tw), fill: color(l.goal), opacity: f }, gl);
-      hover(p, `<b>${l.src.name} → ${l.tgt.name}</b><br>${plural(l.n, l.goal ? 'but' : 'tir raté')}`);
+      hover(p, `<b>${tr(l.src.name)} → ${tr(l.tgt.name)}</b><br>${plural(l.n, l.goal ? W_('but', 'goal') : W_('tir raté', 'missed shot'))}`);
     }
     // amorces à droite de la dernière colonne ouverte : il reste une phase à dérouler
     if (c === last && (FULL() || !c.picked || c.i === STAGES.length - 1)) for (const n of c.nodes) {
@@ -461,9 +478,9 @@ function draw(animate = -1, smooth = true) {
       const lab = label(g1, ci === 0 ? c.x - 18 : c.x + 18, n.y + n.h / 2, ci === 0 ? 'end' : 'start', nodeLines(c, n));
       placed.push(lab);
       g1.addEventListener('click', () => FULL() ? openFull(c.i, n.name) : pick(c.i, n.name));
-      hover(g1, `<b>${n.name}</b><br>${plural(n.shots.length, c.st.goalsOnly ? 'but' : 'tir')}` +
-                (c.st.goalsOnly ? '' : ` · ${plural(n.goals, 'but')}`) +
-                (c.i === STAGES.length - 1 ? '' : !FULL() || c === last ? '<br><i>clique pour dérouler la suite</i>' : '<br><i>clique pour refermer les phases suivantes</i>'));
+      hover(g1, `<b>${tr(n.name)}</b><br>${plural(n.shots.length, c.st.goalsOnly ? W_('but', 'goal') : W_('tir', 'shot'))}` +
+                (c.st.goalsOnly ? '' : ` · ${plural(n.goals, W_('but', 'goal'))}`) +
+                (c.i === STAGES.length - 1 ? '' : !FULL() || c === last ? W_('<br><i>clique pour dérouler la suite</i>', '<br><i>click to unfold what comes next</i>') : W_('<br><i>clique pour refermer les phases suivantes</i>', '<br><i>click to close the following phases</i>')));
     }
     place(placed);
     if (c.i === animate && VP !== null) {
@@ -493,15 +510,15 @@ function draw(animate = -1, smooth = true) {
   let msg = '', parts = null;
   if (FULL()) {
     if (cols.length < STAGES.length) {
-      parts = ['← clique sur un bloc', `pour ouvrir : ${STAGES[cols.length].title.toLowerCase()}`];
-      msg = `Clique sur un bloc de la dernière colonne pour ouvrir toute la phase suivante (${STAGES[cols.length].title.toLowerCase()})` +
-            (cols.length > 1 ? ' · reclique sur une colonne précédente pour refermer.' : '.');
-    } else msg = 'Fin du parcours · reclique sur une colonne précédente pour refermer.';
+      parts = [W_('← clique sur un bloc', '← click a block'), `${W_('pour ouvrir :', 'to open:')} ${STAGES[cols.length].title.toLowerCase()}`];
+      msg = W_(`Clique sur un bloc de la dernière colonne pour ouvrir toute la phase suivante (${STAGES[cols.length].title.toLowerCase()})`, `Click a block in the last column to open the whole next phase (${STAGES[cols.length].title.toLowerCase()})`) +
+            (cols.length > 1 ? W_(' · reclique sur une colonne précédente pour refermer.', ' · click an earlier column again to close.') : '.');
+    } else msg = W_('Fin du parcours · reclique sur une colonne précédente pour refermer.', 'End of the flow · click an earlier column again to close.');
   } else {
-    if (last.picked && last.picked.name === 'Raté' && last.st.key === 'res') msg = 'Les tirs ratés s\'arrêtent ici.';
-    else if (cols.length < STAGES.length && !last.picked) { msg = `Clique sur un bloc pour dérouler : ${STAGES[cols.length].title.toLowerCase()}`; parts = ['← clique sur un bloc', `pour dérouler : ${STAGES[cols.length].title.toLowerCase()}`]; }
-    else if (cols.length === STAGES.length) msg = 'Fin du parcours.';
-    if (msg && state.path.length) msg += ' · Clique à nouveau sur un bloc choisi pour le refermer.';
+    if (last.picked && last.picked.name === 'Raté' && last.st.key === 'res') msg = W_('Les tirs ratés s\'arrêtent ici.', 'Missed shots stop here.');
+    else if (cols.length < STAGES.length && !last.picked) { msg = `${W_('Clique sur un bloc pour dérouler :', 'Click a block to unfold:')} ${STAGES[cols.length].title.toLowerCase()}`; parts = [W_('← clique sur un bloc', '← click a block'), `${W_('pour dérouler :', 'to unfold:')} ${STAGES[cols.length].title.toLowerCase()}`]; }
+    else if (cols.length === STAGES.length) msg = W_('Fin du parcours.', 'End of the flow.');
+    if (msg && state.path.length) msg += W_(' · Clique à nouveau sur un bloc choisi pour le refermer.', ' · Click a chosen block again to close it.');
   }
   if (nx && (parts || !FULL()) && !VIDEO) {
     const t = el('text', { class: 'next-hint fadein', x: nx - 30, y: TOP + H / 2, 'text-anchor': 'start' }, svg);
@@ -512,7 +529,7 @@ function draw(animate = -1, smooth = true) {
   const lg = el('g', { transform: `translate(${W / 2 - 160},${TOP + H + 140})`, display: VIDEO ? 'none' : 'inline' }, svg);
   [['But', 1], ['Raté', 0]].forEach(([t, gl_], j) => {
     el('rect', { x: j * 190, y: -16, width: 38, height: 20, fill: color(gl_) }, lg);
-    const tx = el('text', { x: j * 190 + 50, y: 1, 'font-size': 24, fill: 'var(--ink2)' }, lg); tx.textContent = t;
+    const tx = el('text', { x: j * 190 + 50, y: 1, 'font-size': 24, fill: 'var(--ink2)' }, lg); tx.textContent = tr(t);
   });
   if (prev.length && smooth) {
     const ghost = el('g', { class: 'ghost' }, svg);
@@ -535,28 +552,28 @@ function panel() {
   crumbs.innerHTML = '';
   const add = (txt, cls, fn) => { const s = document.createElement('span'); s.className = cls; s.textContent = txt; if (fn) s.onclick = fn; crumbs.appendChild(s); return s; };
   if (FULL()) {
-    add('Phases ouvertes :', 'stage');
+    add(W_('Phases ouvertes :', 'Open phases:'), 'stage');
     STAGES.slice(0, state.depth).forEach((st, i) => {
       if (i) add('›', 'sep');
       add(st.title.toLowerCase(), 'chip', () => { state.depth = i + 1; if (state.focus && state.focus.i > i) state.focus = null; draw(); });
     });
-    if (state.focus) { add('·', 'sep'); const c = add('', 'chip', () => { state.focus = null; draw(); }); c.innerHTML = `<span class="stage">bloc</span>${state.focus.name} ✕`; }
+    if (state.focus) { add('·', 'sep'); const c = add('', 'chip', () => { state.focus = null; draw(); }); c.innerHTML = `<span class="stage">${W_('bloc', 'block')}</span>${tr(state.focus.name)} ✕`; }
   } else {
-    add('Tous les tirs', 'chip', () => { state.path = []; draw(); });
+    add(W_('Tous les tirs', 'All shots'), 'chip', () => { state.path = []; draw(); });
     state.path.forEach((v, i) => {
       add('›', 'sep');
       const c = add('', 'chip', () => { state.path = state.path.slice(0, i + 1); draw(); });
-      c.innerHTML = `<span class="stage">${STAGES[i].title.toLowerCase()}</span>${v}`;
+      c.innerHTML = `<span class="stage">${STAGES[i].title.toLowerCase()}</span>${tr(v)}`;
     });
   }
   const sub = selection(), g = sub.filter(s => s.goal).length, xg = sub.reduce((a, s) => a + (s.xg || 0), 0);
-  stats.innerHTML = `${plural(sub.length, 'tir')} · <b class="g">${plural(g, 'but')}</b> · <b class="m">${plural(sub.length - g, 'raté')}</b> · ${pct(g, sub.length)} de réussite · ${xg.toFixed(1)} xG`;
+  stats.innerHTML = `${plural(sub.length, W_('tir', 'shot'))} · <b class="g">${plural(g, W_('but', 'goal'))}</b> · <b class="m">${plural(sub.length - g, W_('raté', 'miss'))}</b> · ${pct(g, sub.length)} ${W_('de réussite', 'conversion')} · ${xg.toFixed(1)} xG`;
   const idle = FULL() ? state.depth === 1 && !state.focus : !state.path.length;
   document.getElementById('back').disabled = idle;
   document.getElementById('reset').disabled = idle;
   const seasonTxt = state.season === 'all' ? SEASON_ALL : SEASONS.find(s => s[0] === state.season)[1];
-  const compTxt = state.comp === 'all' ? COMP_ALL : COMPS.find(c => c[0] === state.comp)[1];
-  document.getElementById('sub').textContent = `${META.equipe} · ${compTxt} · ${seasonTxt} · ${SHOTS_F.length} tirs, ${SHOTS_F.filter(s => s.goal).length} buts`;
+  const compTxt = state.comp === 'all' ? COMP_ALL : tr(COMPS.find(c => c[0] === state.comp)[1]);
+  document.getElementById('sub').textContent = `${META.equipe} · ${compTxt} · ${seasonTxt} · ${SHOTS_F.length} ${W_('tirs', 'shots')}, ${SHOTS_F.filter(s => s.goal).length} ${W_('buts', 'goals')}`;
 }
 
 // ---------- carte des tirs (but en haut, gauche de l'attaquant à gauche) ----------
@@ -592,7 +609,7 @@ function pitch() {
   el('circle', { cx: sx(34), cy: sy(92.925), r: 9, fill: pen.length ? 'var(--made)' : 'var(--ink2)', opacity: pen.length ? .9 : .6 }, pg);
   pg.addEventListener('click', () => mapPick('Point de penalty'));
   const penAll = SHOTS_F.filter(s => s.zone === 'Point de penalty'), penG = penAll.filter(s => s.goal).length;
-  hover(pg, `<b>Penalties</b><br>${penAll.length} tirés · ${plural(penG, 'but')} · ${penAll.length - penG} ratés`);
+  hover(pg, `<b>Penalties</b><br>${penAll.length} ${W_('tirés', 'taken')} · ${plural(penG, W_('but', 'goal'))} · ${penAll.length - penG} ${W_('ratés', 'missed')}`);
   // étiquettes reliées aux zones (chiffres de la sélection courante)
   const tot = {};
   sel.forEach(s => { tot[s.zone] = tot[s.zone] || [0, 0]; tot[s.zone][0]++; tot[s.zone][1] += s.goal; });
@@ -601,8 +618,8 @@ function pitch() {
     const gg = el('g', { class: 'tag', style: 'cursor:pointer', opacity: n ? 1 : .35 }, map);
     el('path', { d: `M${x + (side < 0 ? 4 : -4)},${ty - 4} L${sx(cy)},${sy(cx)}`, stroke: 'var(--ink2)', 'stroke-width': .8, fill: 'none', opacity: .6 }, gg);
     const t = el('text', { x, y: ty, 'text-anchor': side < 0 ? 'end' : 'start', 'font-size': 14, fill: 'var(--ink2)' }, gg);
-    const a = el('tspan', { 'font-weight': 700, x, dy: 0 }, t); a.textContent = z;
-    const b = el('tspan', { fill: 'var(--made-txt)', x, dy: 17 }, t); b.textContent = `${n} tirs · ${plural(g, 'but')}`;
+    const a = el('tspan', { 'font-weight': 700, x, dy: 0 }, t); a.textContent = tr(z);
+    const b = el('tspan', { fill: 'var(--made-txt)', x, dy: 17 }, t); b.textContent = `${n} ${W_('tirs', 'shots')} · ${plural(g, W_('but', 'goal'))}`;
     gg.addEventListener('click', () => mapPick(z));
   };
   tag('Surface de but', -1, Y0 + 22, 102, 38);
@@ -616,16 +633,16 @@ function pitch() {
 // infobulle des tirs de la carte : le point le plus proche du curseur (les zones restent cliquables dessous)
 function shotTip(s) {
   const d = s.date.split('-').reverse().join('/'), saison = (SEASONS.find(x => x[0] === s.season) || [, s.season])[1];
-  const res = s.goal ? `<b style="color:var(--made-txt)">But</b>` : `<b style="color:var(--miss-txt)">Raté · ${s.type.toLowerCase()}</b>`;
+  const res = s.goal ? `<b style="color:var(--made-txt)">${tr('But')}</b>` : `<b style="color:var(--miss-txt)">${tr('Raté')} · ${tr(s.type).toLowerCase()}</b>`;
   const row = (k, v) => `<br><span style="opacity:.65">${k}</span> ${v}`;
-  return `${res} contre <b>${s.opp}</b>`
-    + row('Date', `${d} · ${s.min}<sup>e</sup> minute`)
-    + row('Saison', `${saison} · ${(COMPS.find(c => c[0] === s.comp) || [, s.comp])[1]}`)
+  return `${res} ${W_('contre', 'against')} <b>${s.opp}</b>`
+    + row('Date', W_(`${d} · ${s.min}<sup>e</sup> minute`, `${d} · ${s.min}'`))
+    + row(W_('Saison', 'Season'), `${saison} · ${tr((COMPS.find(c => c[0] === s.comp) || [, s.comp])[1])}`)
     + (s.xg != null ? row('xG', s.xg.toFixed(2)) : '')
-    + row('Tir', s.body + (s.ftouch ? ' · en une touche' : ''))
-    + row('Zone', s.zone)
-    + row('Phase', s.sit)
-    + (s.goal ? row('Passeur', s.ast || 'sans passeur') : '');
+    + row(W_('Tir', 'Shot'), tr(s.body) + (s.ftouch ? W_(' · en une touche', ' · first-time') : ''))
+    + row('Zone', tr(s.zone))
+    + row('Phase', tr(s.sit))
+    + (s.goal ? row(W_('Passeur', 'Assist'), s.ast || W_('sans passeur', 'no assist')) : '');
 }
 if (HOVER) {
   let ring = null;
@@ -659,14 +676,14 @@ function filters() {
     const g = document.createElement('div'); g.className = 'grp';
     g.innerHTML = `<span>${label}</span>`;
     for (const [v, t] of opts) {
-      const b = document.createElement('button'); b.textContent = t; b.className = state[key] === v ? 'on' : '';
+      const b = document.createElement('button'); b.textContent = tr(t); b.className = state[key] === v ? 'on' : '';
       b.onclick = () => { state[key] = v; state.path = []; state.depth = 1; state.focus = null; filters(); prepare(); draw(); };
       g.appendChild(b);
     }
     box.appendChild(g);
   };
-  grp('Saison', SEASONS, 'season'); grp('Compétition', COMPS, 'comp');
-  grp('Déroulé', [['full', 'Toute la phase'], ['path', 'Ma sélection']], 'mode');
+  grp(W_('Saison', 'Season'), SEASONS, 'season'); grp(W_('Compétition', 'Competition'), COMPS, 'comp');
+  grp(W_('Déroulé', 'Unfold'), [['full', W_('Toute la phase', 'Whole phase')], ['path', W_('Ma sélection', 'My selection')]], 'mode');
 }
 const back = () => {
   if (FULL()) { if (state.focus && state.focus.i >= state.depth - 1) state.focus = null; else { state.depth = Math.max(1, state.depth - 1); state.focus = null; } }
@@ -699,7 +716,7 @@ window.__frame = t => {
   const z = ease(cl((t - (phaseStart(STAGES.length - 1) + TL.rev + TL.hold)) / TL.zoom));
   if (z > 0) { const sf = VIEW_W / W; sc = SC + (sf - SC) * z; cam *= 1 - z; ty = (VIEW_H - HH * sc) / 2 * z; }
   svg.style.transform = `translate(${-cam * sc}px, ${ty}px) scale(${sc})`;
-  document.getElementById('ph').textContent = z > .5 ? 'Le parcours complet' : `Phase ${k + 1}/${STAGES.length} · ${STAGES[k].q}`;
+  document.getElementById('ph').textContent = z > .5 ? W_('Le parcours complet', 'The complete flow') : `Phase ${k + 1}/${STAGES.length} · ${STAGES[k].q}`;
 };
 if (VIDEO) document.body.classList.add('video');
 if (VIDEO && SPLIT) document.body.classList.add('split');

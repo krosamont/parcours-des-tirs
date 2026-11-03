@@ -1,6 +1,19 @@
 # Le parcours des tirs d'un joueur (Sankey « Shot Flow »)
 
-Sankey « Shot Flow » des tirs d'un joueur, inspiré des visuels basket de graphsketball (`docs/inspiration/`). Premier joueur : Kylian Mbappé au Real Madrid (`joueurs/mbappe/`).
+Sankey « Shot Flow » des tirs d'un joueur, inspiré des visuels basket de graphsketball. Premier joueur : Kylian Mbappé au Real Madrid.
+
+**Le visuel en ligne : <https://data-workers.com/projet/mbappe_tirs/>** (en anglais : <https://data-workers.com/en/projet/mbappe_tirs/>).
+
+## Exemple reproductible
+
+`joueurs/exemple/` contient un échantillon de 90 tirs de Kylian Mbappé (dont 25 buts), au format de l'export
+MotherDuck (`sql/requete_motherduck.sql`). Les exports complets ne sont pas versionnés (données WhoScored / Opta).
+
+```bash
+pip install -r requirements.txt
+python3 src/build_fresque.py exemple      # -> sortie/exemple/ : fresque.html, interactive.html, site/ (FR, EN, sombre, clair)
+open sortie/exemple/interactive.html
+```
 
 Parcours d'un tir : **zone → situation → surface → résultat**, puis pour les buts seulement
 **passeur → comment il a marqué → phase du but**. Bleu = but, rouge = raté (turquoise / corail sur le site).

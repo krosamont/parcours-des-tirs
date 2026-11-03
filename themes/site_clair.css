@@ -2,7 +2,7 @@
 :root { --line: rgba(29,27,25,.14); }
 body { background-image: none; }
 .sitenav { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; font-size: 14px; }
-.sitenav img { width: 30px; height: 30px; border-radius: 8px; }
+.sitenav img { width: 30px; height: 30px; border-radius: 0; }
 .sitenav a { color: var(--muted); text-decoration: none; }
 .sitenav a:hover { color: var(--ink); }
 .sitenav span { color: var(--faint); }

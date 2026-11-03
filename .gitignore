@@ -8,3 +8,8 @@ sortie/
 *.MP4
 *.gif
 Screenshot*.png
+# exports complets (données WhoScored / Opta) : jamais versionnés ; seul l'échantillon de l'exemple l'est (90 tirs)
+joueurs/*/export.csv
+!joueurs/exemple/export.csv
+# images d'inspiration (travail de graphsketball) : gardées en local
+docs/inspiration/

@@ -10,6 +10,7 @@ usage: python3 src/build_fresque.py <joueur> [--carte] [--sql]
   interactive.html         même parcours, déroulé phase par phase au clic (et mode vidéo ?video=1)
   site/index.html          page interactive aux couleurs de data-workers.com, publiée dans /projet/<slug>/
   site/clair/index.html    version claire, publiée dans /projet/<slug>/clair/
+  site/en/index.html       version anglaise (sombre), publiée dans /en/projet/<slug>/ ; site/en/clair/ : claire
 
 Parcours d'un tir : ZONE -> SITUATION -> SURFACE -> RÉSULTAT -> (buts seulement) PASSEUR -> COMMENT IL A MARQUÉ -> PHASE
 """
@@ -17,6 +18,14 @@ import argparse, base64, html, json, re
 from pathlib import Path
 
 import pandas as pd
+
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'outils' / 'html'))
+try:  # aperçu des liens partagés (le logo Data Workers) : outil du site, absent d'un clone du dépôt seul
+    from partage import avec_logo  # noqa: E402
+except ImportError:
+    def avec_logo(page):
+        return page
 
 ROOT = Path(__file__).resolve().parent.parent      # racine du projet
 
@@ -135,7 +144,7 @@ def site_replacements(cfg, shots, clair=False):
         f'<title>Parcours des tirs {court}</title>': f'<title>{nom}, le parcours de ses tirs · Data Workers</title>',
         '<!--__HEAD__-->': head if clair else head + '\n<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">',
         '/*__THEME__*/': (ROOT / 'themes' / ('site_clair.css' if clair else 'site_sombre.css')).read_text(),
-        '<!--__NAV__-->': f'<nav class="sitenav"><img src="/assets/images/logo.png" alt=""><a href="https://data-workers.com/">Data Workers</a><span>/</span><a href="/projet/">Projets</a>{switch}</nav>',
+        '<!--__NAV__-->': f'<nav class="sitenav"><img src="/assets/images/{"logo_orange" if clair else "logo"}.png" alt=""><a href="https://data-workers.com/">Data Workers</a><span>/</span><a href="/projet/">Projets</a>{switch}</nav>',
         '<!--__FOOT__-->': '<footer class="sitefoot"><a href="https://data-workers.com/">data-workers.com</a> · Kevin Rosamont Prombo · Données WhoScored × FotMob</footer>',
     }
     if not clair:
@@ -174,6 +183,66 @@ def add_card(cfg, shots):
     print(f"site/projet_index.html : carte {href} ajoutée (à publier avec ./deploy.sh {cfg['id']} --index)")
 
 
+# textes fixes du gabarit en anglais (la partie dynamique est traduite dans le gabarit, constante EN)
+GABARIT_EN = {
+    '<html lang="fr">': '<html lang="en">',
+    'const EN = /*__EN__*/false;': 'const EN = true;',
+    '<button id="back">← Retour</button>': '<button id="back">← Back</button>',
+    '<button id="reset">Recommencer</button>': '<button id="reset">Start over</button>',
+    'Voir la fresque complète</a>': 'See the full chart</a>',
+    ('<p class="note">* CPA : coup de pied arrêté (coup franc indirect, touche, etc.). Les corners, les penalties et les coups francs directs '
+     'sont comptés à part.<br>« Sans passeur » : buts sans passe décisive d\'un coéquipier (penalties, reprises, ballons récupérés, actions seul). '
+     '« Autres » : les passeurs hors des 7 premiers, regroupés.</p>'):
+    ('<p class="note">* Other set piece: indirect free kick, throw-in, etc. Corners, penalties and direct free kicks are counted '
+     'separately.<br>"No assist": goals without an assist from a teammate (penalties, rebounds, won balls, solo efforts). '
+     '"Others": assist providers outside the top 7, grouped together.</p>'),
+    '<i style="background:var(--made)"></i>But</span>': '<i style="background:var(--made)"></i>Goal</span>',
+    '<i style="background:var(--miss)"></i>Raté</span>': '<i style="background:var(--miss)"></i>Missed</span>',
+    '<div class="src">* CPA : coup de pied arrêté · Données : WhoScored × FotMob</div>': '<div class="src">* set piece · Data: WhoScored × FotMob</div>',
+}
+SWITCH_LANGUE = {  # même bouton FR / EN que les autres pages de data-workers.com : sous le bouton clair / sombre
+    False: "a.lang-switch { position: fixed; top: 56px; right: 14px; z-index: 1000; display: inline-flex; align-items: center; justify-content: center; min-width: 42px; padding: 8px 12px; font: 600 13px/1 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; letter-spacing: .04em; text-decoration: none; border: 1px solid rgba(255,255,255,.24); border-radius: 999px; background: rgba(7,11,21,.8); color: #e2e8f0; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }\na.lang-switch:hover { border-color: #2dc4c2; color: #fff; }",
+    True: "a.lang-switch { position: fixed; top: 56px; right: 14px; z-index: 1000; display: inline-flex; align-items: center; justify-content: center; min-width: 42px; padding: 8px 12px; font: 13px/1 'Arvo', Rockwell, Georgia, serif; text-decoration: none; border: 1.5px solid #1d1b19; border-radius: 2px; background: #ebe7de; color: #1d1b19; }\na.lang-switch:hover { background: #1d1b19; color: #ebe7de; }",
+}
+
+
+def bouton_langue(page, cfg, clair, en):
+    sous = 'clair/' if clair else ''
+    fr_url, en_url = f"/projet/{cfg['slug']}/{sous}", f"/en/projet/{cfg['slug']}/{sous}"
+    cible, code, titre = (fr_url, 'fr', 'Version française') if en else (en_url, 'en', 'English version')
+    tete = (f'<link rel="alternate" hreflang="fr" href="https://data-workers.com{fr_url}">\n'
+            f'<link rel="alternate" hreflang="en" href="https://data-workers.com{en_url}">\n'
+            f'<style id="lang-switch">\n{SWITCH_LANGUE[clair]}\n@media (max-width: 600px) {{ a.lang-switch {{ right: 10px; width: 38px; '
+            f'height: 38px; min-width: 0; padding: 0; font-size: 12px; }} }}\n</style>\n')
+    a = f'<a class="lang-switch" href="{cible}" hreflang="{code}" lang="{code}" title="{titre}">{code.upper()}</a>\n'
+    page = page.replace('</head>', tete + '</head>', 1)
+    return page.replace('<body>\n', '<body>\n' + a, 1)
+
+
+def site_replacements_en(cfg, shots, clair=False):
+    """Version anglaise publiée sur data-workers.com/en/projet/<slug>/."""
+    nom, court, eq, n = html.escape(cfg['nom']), html.escape(cfg['nom_court']), html.escape(cfg['equipe']), len(shots)
+    url = f"https://data-workers.com/en/projet/{cfg['slug']}/" + ('clair/' if clair else '')
+    head = f"""<meta name="description" content="All {n} shots by {nom} ({eq}), from the shooting zone to the assist provider and the phase of the goal: an interactive Sankey to unfold phase by phase.">
+<meta property="og:title" content="{nom}: shot flow">
+<meta property="og:description" content="Zone, situation, body part, outcome, assist: the interactive Sankey of {court}'s shots ({eq}).">
+<meta property="og:image" content="https://data-workers.com/projet/assets/{cfg['slug']}.jpg">
+<meta property="og:url" content="{url}">
+<link rel="icon" href="/assets/images/logo.ico">"""
+    switch = '<a class="switch theme-switch" href="../">Dark version</a>' if clair else '<a class="switch theme-switch" href="clair/">Light version</a>'
+    accueil = '/en/clair/' if clair else '/en/'
+    rep = {
+        f'<title>Parcours des tirs {court}</title>': f'<title>{nom}: shot flow · Data Workers</title>',
+        '<!--__HEAD__-->': head if clair else head + '\n<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">',
+        '/*__THEME__*/': (ROOT / 'themes' / ('site_clair.css' if clair else 'site_sombre.css')).read_text(),
+        '<!--__NAV__-->': f'<nav class="sitenav"><img src="/assets/images/{"logo_orange" if clair else "logo"}.png" alt=""><a href="{accueil}">Data Workers</a><span>/</span><a href="/en/projet/{"clair/" if clair else ""}">Projects</a>{switch}</nav>',
+        '<!--__FOOT__-->': f'<footer class="sitefoot"><a href="{accueil}">data-workers.com</a> · Kevin Rosamont Prombo · Data: WhoScored × FotMob</footer>',
+        f'<h1>{nom},<br>le parcours de ses tirs</h1>': f'<h1>{nom},<br>{"his shot flow" if clair else "<em>his shot flow</em>"}</h1>',
+        **GABARIT_EN,
+    }
+    return rep
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('joueur'); ap.add_argument('--carte', action='store_true'); ap.add_argument('--sql', action='store_true')
@@ -193,16 +262,22 @@ def main():
     for tpl, name, site in (('fresque.html', 'fresque.html', None),
                             ('interactive.html', 'interactive.html', None),
                             ('interactive.html', 'site/index.html', site_replacements(cfg, shots)),
-                            ('interactive.html', 'site/clair/index.html', site_replacements(cfg, shots, clair=True))):
+                            ('interactive.html', 'site/clair/index.html', site_replacements(cfg, shots, clair=True)),
+                            ('interactive.html', 'site/en/index.html', site_replacements_en(cfg, shots)),
+                            ('interactive.html', 'site/en/clair/index.html', site_replacements_en(cfg, shots, clair=True))):
         page = (ROOT / 'templates' / tpl).read_text()
         page = page.replace('__NOM_COURT__', html.escape(cfg['nom_court'])).replace('__NOM__', html.escape(cfg['nom']))
         for key, value in {**(site or {}), **data}.items():
             page = page.replace(key, value)
         for key in ('<!--__HEAD__-->', '/*__THEME__*/', '<!--__NAV__-->', '<!--__FOOT__-->'):
             page = page.replace(key, '')
+        if name.startswith('site/'):  # pages du site : bouton FR / EN
+            page = bouton_langue(page, cfg, clair=name.endswith('clair/index.html'), en=name.startswith('site/en/'))
+            if name.startswith('site/en/') and ('<html lang="fr">' in page or 'const EN = true;' not in page):
+                raise SystemExit(f'{name} : le gabarit a changé, mettre à jour GABARIT_EN')
         out = cfg['out'] / name
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(page)
+        out.write_text(avec_logo(page) if name.startswith('site/') else page)
         print(f'{out.relative_to(ROOT)}: {len(shots)} tirs, {g} buts')
     if a.carte:
         add_card(cfg, shots)

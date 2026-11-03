@@ -12,7 +12,7 @@ body { background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(45,19
 h1 { font-weight: 800; letter-spacing: -.02em; text-shadow: none; }
 h1 em { font-style: normal; color: var(--made); }
 .sitenav { display: flex; align-items: center; gap: 12px; margin-bottom: 26px; font-size: 14px; font-weight: 500; }
-.sitenav img { width: 32px; height: 32px; border-radius: 9px; }
+.sitenav img { width: 32px; height: 32px; border-radius: 0; }
 .sitenav a { color: var(--muted); text-decoration: none; }
 .sitenav a:hover { color: var(--ink); }
 .sitenav span { color: #475569; }
