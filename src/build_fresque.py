@@ -140,12 +140,13 @@ def site_replacements(cfg, shots, clair=False):
 <meta property="og:url" content="{url}">
 <link rel="icon" href="/assets/images/logo.ico">"""
     switch = '<a class="switch theme-switch" href="../">Version sombre</a>' if clair else '<a class="switch theme-switch" href="clair/">Version claire</a>'
+    accueil = '/clair/' if clair else '/'   # la version claire mène à l'accueil et aux projets clairs
     rep = {
         f'<title>Parcours des tirs {court}</title>': f'<title>{nom}, le parcours de ses tirs · Data Workers</title>',
         '<!--__HEAD__-->': head if clair else head + '\n<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">',
         '/*__THEME__*/': (ROOT / 'themes' / ('site_clair.css' if clair else 'site_sombre.css')).read_text(),
-        '<!--__NAV__-->': f'<nav class="sitenav"><img src="/assets/images/{"logo_orange" if clair else "logo"}.png" alt=""><a href="https://data-workers.com/">Data Workers</a><span>/</span><a href="/projet/">Projets</a>{switch}</nav>',
-        '<!--__FOOT__-->': '<footer class="sitefoot"><a href="https://data-workers.com/">data-workers.com</a> · Kevin Rosamont Prombo · Données WhoScored × FotMob</footer>',
+        '<!--__NAV__-->': f'<nav class="sitenav"><img src="/assets/images/{"logo_orange" if clair else "logo"}.png" alt=""><a href="{accueil}">Data Workers</a><span>/</span><a href="/projet/{"clair/" if clair else ""}">Projets</a>{switch}</nav>',
+        '<!--__FOOT__-->': f'<footer class="sitefoot"><a href="{accueil}">data-workers.com</a> · Kevin Rosamont Prombo · Données WhoScored × FotMob</footer>',
     }
     if not clair:
         rep[f'<h1>{nom},<br>le parcours de ses tirs</h1>'] = f'<h1>{nom},<br><em>le parcours de ses tirs</em></h1>'
@@ -271,6 +272,8 @@ def main():
             page = page.replace(key, value)
         for key in ('<!--__HEAD__-->', '/*__THEME__*/', '<!--__NAV__-->', '<!--__FOOT__-->'):
             page = page.replace(key, '')
+        if name.startswith('site/'):  # pages du site : la fresque complète n'y est pas publiée, pas de bouton vers elle
+            page = re.sub(r'\s*<a class="btn full" href="fresque.html">[^<]*</a>', '', page)
         if name.startswith('site/'):  # pages du site : bouton FR / EN
             page = bouton_langue(page, cfg, clair=name.endswith('clair/index.html'), en=name.startswith('site/en/'))
             if name.startswith('site/en/') and ('<html lang="fr">' in page or 'const EN = true;' not in page):
